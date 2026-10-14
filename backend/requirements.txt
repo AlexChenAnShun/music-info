@@ -1,0 +1,5 @@
+fastapi==0.115.6
+uvicorn==0.32.1
+mutagen==1.47.0
+requests==2.32.3
+pydantic==2.10.4

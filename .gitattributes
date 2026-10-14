@@ -1,0 +1,7 @@
+# 统一换行：仓库与工作区都用 LF（Dockerfile/RUN 行不能被 CRLF 破坏）
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.gif binary

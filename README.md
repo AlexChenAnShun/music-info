@@ -1,0 +1,123 @@
+# Music Info
+
+自托管的本地音乐标签工作台：**多源检索元数据 → 预览差异 → 人工确认后写入**，每次写入都有历史记录，可预览、可一键回退。
+
+前端是单文件原生 HTML/CSS/JS（无构建工具、无框架），后端 FastAPI + mutagen，元数据审计存 SQLite(WAL)，Docker 一条命令部署。
+
+> 只改元数据：标签、封面、歌词。**不触碰音频内容本身**。
+
+---
+
+## ✨ 功能
+
+- **多源融合检索**：咪咕 / QQ 音乐 / 网易云 / 酷狗 / 酷我 / iTunes / MusicBrainz 并行查询，按标题/艺术家/专辑相似度排序（`/api/smart_search`）
+- **补充来源**：Deezer（`/api/deezer_search`）、AcoustID 声纹识别（本地 `fpcalc` 指纹，抗错误标签）、LRCLIB 歌词兜底
+- **17 个字段**：标题、艺术家、专辑、专辑艺术家、发行日期、音轨号、总音轨数、光盘编号、总光盘数、流派、语言、专辑类型、简介、描述、专辑版本、歌词、同步 LRC
+- **安全写入**：默认「只补空白，不覆盖现有标签」；写入前必须人工确认；每次提交校验 `file_version`，避免并发覆盖
+- **历史与回退**：SQLite(WAL) 记录每次写入的元数据快照，可预览差异并一键回退
+- **后台任务队列**：批量预览 / 批量写入，可取消、并发可配；未匹配（原文件尚未刮削）与真失败分开呈现
+- **封面**：候选封面可预览，确认后与标签在同一次提交写入
+- **界面**：曲库封面缩略图、匹配度徽标、进度条；响应式，宽度 2560 → 390 均可用
+
+---
+
+## 🚀 快速开始（Docker）
+
+```bash
+git clone https://github.com/AlexChenAnShun/music-info.git
+cd music-info
+cp .env.example .env
+# 编辑 docker-compose.yml，把 /path/to/your/music 换成你的音乐目录
+docker compose up -d
+```
+
+浏览器打开 <http://localhost:8003>。
+
+---
+
+## ⚙️ 环境变量
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `MEDIA_DIR` | `/app/media` | 音乐库根目录（容器内路径） |
+| `DATA_DIR` | `/app/data` | 数据目录：SQLite 库 + 元数据版本快照 |
+| `JOB_WORKERS` | `2` | 后台任务并发数 |
+| `FANART_API_KEY` | 空 | Fanart.tv key，用于艺术家图片；留空则不启用 |
+| `ACOUSTID_CLIENT_KEY` | 空 | AcoustID 客户端 key，用于声纹识别；留空则该功能不可用 |
+
+---
+
+## 🔌 接口一览
+
+**曲库与标签**
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/list` | 目录列表（曲库浏览） |
+| GET | `/api/track` | 读取单个文件标签与音频技术信息 |
+| POST | `/api/save` | 写入标签（需 `expected_version`，需确认） |
+| GET/POST | `/api/cover` | 读取/设置封面 |
+| GET/POST | `/api/lrc_file` | 读取/写入同名外置 `.lrc` |
+
+**检索与歌词**
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/smart_search` | 多源融合检索（推荐） |
+| GET | `/api/sources` | 各源可用状态 |
+| GET | `/api/{ncm,migu,qq,kugou,kuwo,itunes,deezer,mb}_search` | 单源检索 |
+| GET | `/api/lyric` | 按源取歌词（含翻译） |
+| GET | `/api/lrclib_lyric` | LRCLIB 歌词兜底 |
+| GET | `/api/fp_search` | AcoustID 声纹识别 |
+
+**任务与历史**
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/commit` | 提交一批预览结果 |
+| GET/POST | `/api/tasks` | 查询/创建后台任务 |
+| GET | `/api/tasks/{job_id}` | 任务进度 |
+| POST | `/api/tasks/{job_id}/cancel` | 取消任务 |
+| GET | `/api/history` | 元数据修改历史 |
+| GET | `/api/history/{version_id}/preview` | 预览某个历史版本 |
+| POST | `/api/history/{version_id}/restore` | 回退到该版本 |
+
+---
+
+## 🧱 技术栈
+
+| 层 | 实现 |
+|---|---|
+| 后端 | Python 3.12 · FastAPI · uvicorn · mutagen · requests |
+| 存储 | SQLite（WAL 模式），元数据版本快照存 `data/versions/` |
+| 前端 | 单文件 `backend/static/index.html`，原生 HTML/CSS/JS |
+| 容器 | `python:3.12-slim` + `libchromaprint-tools`（fpcalc） |
+
+---
+
+## 🧪 开发与测试
+
+```bash
+# 后端接口测试
+pip install -r backend/requirements.txt
+python -m pytest tests/test_workflow.py
+
+# 前端渲染/交互检查（需要 Node.js 与本地 Chromium）
+node tests/workflow-ui.cjs
+node tests/viewport-layout.cjs
+```
+
+---
+
+## ⚠️ 安全说明
+
+- 服务**没有鉴权**，请只在本机或内网使用，不要直接暴露到公网
+- 媒体目录建议**只读挂载**（`/app/media:ro`），所有写入都经 API 且需要确认
+- 只修改元数据、封面与歌词，不重编码音频；写入前会校验 `file_version`
+- 请勿把 `.env`、`data/` 或任何密钥提交进仓库
+
+---
+
+## 📄 许可
+
+[MIT](LICENSE)

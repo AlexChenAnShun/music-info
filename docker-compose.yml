@@ -1,0 +1,24 @@
+services:
+  music-info:
+    build: ./backend
+    image: music-info:latest
+    container_name: music-info
+    ports:
+      - "8003:8003"
+    environment:
+      MEDIA_DIR: /app/media
+      DATA_DIR: /app/data
+      JOB_WORKERS: "2"
+      FANART_API_KEY: "${FANART_API_KEY:-}"
+      ACOUSTID_CLIENT_KEY: "${ACOUSTID_CLIENT_KEY:-}"
+    volumes:
+      # 把 /path/to/your/music 改成你自己的音乐目录；建议只读挂载
+      - /path/to/your/music:/app/media:ro
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8003/api/system',timeout=2).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
