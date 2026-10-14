@@ -365,7 +365,7 @@ def _mb_fetch(query: str, limit: int):
     r = requests.get(
         "https://musicbrainz.org/ws/2/recording/",
         params={"query": query, "fmt": "json", "limit": limit},
-        headers={"User-Agent": MB_UA},
+        headers={"User-Agent": _mb_ua()},
         timeout=20,
     )
     r.raise_for_status()
@@ -388,7 +388,7 @@ def _mb_release(release_id: str):
         r = requests.get(
             f"https://musicbrainz.org/ws/2/release/{release_id}",
             params={"inc": "recordings+media+release-groups", "fmt": "json"},
-            headers={"User-Agent": MB_UA},
+            headers={"User-Agent": _mb_ua()},
             timeout=20,
         )
         if r.status_code == 200:
@@ -1038,8 +1038,9 @@ _SMART_JOBS = [("migu", migu_search_raw), ("qq", qq_search_raw),
 def smart_search_raw(q: str, artist: str = "", album: str = "", limit: int = 15):
     per_source, out = {}, []
     with ThreadPoolExecutor(max_workers=8) as pool:
-        active = [(name, fn) for name, fn in _SMART_JOBS if _PLUGINS.is_enabled(name)]
-        futs = {pool.submit(_timed, name, fn, q, 8): name for name, fn in active}
+        active = [(name, fn) for name, fn in _smart_jobs() if _PLUGINS.is_enabled(name)]
+        futs = {pool.submit(_timed, name, fn, q,
+                            _PLUGINS.param(name, "limit", 8) or 8): name for name, fn in active}
         try:
             done = as_completed(futs, timeout=25)
             for fut in done:
@@ -1210,6 +1211,8 @@ from pydantic import Field as _Field, ConfigDict as _ConfigDict
 from fastapi import Request as _Request
 from mtl_store import Store as _Store
 from mtl_plugins import PluginRegistry as _PluginRegistry
+from mtl_plugins import run_custom_search as _custom_search
+from mtl_plugins import test_search as _custom_test
 from mtl_safe import Writer as _Writer, FIELDS as _FIELDS, image_payload as _image_payload, cover_bytes as _cover_bytes, root_path as _root_path
 from mtl_jobs import Engine as _Engine
 
@@ -1338,6 +1341,20 @@ def _timed(pid, fn, *args, **kwargs):
         raise
     _PLUGINS.record(pid, True, int((time.time() - t0) * 1000))
     return out
+
+
+def _mb_ua():
+    """MusicBrainz 的 User-Agent（可在插件库中编辑）。"""
+    return _PLUGINS.param("mb", "user_agent", MB_UA) or MB_UA
+
+
+def _smart_jobs():
+    """内置源 + 自定义源；每次调用重建，新增 / 删除插件后立即生效。"""
+    jobs = list(_SMART_JOBS)
+    for defn in _PLUGINS.custom_definitions():
+        jobs.append((defn["id"],
+                     (lambda d: (lambda q, limit=8: _custom_search(d, q, limit)))(defn)))
+    return jobs
 _WRITER = _Writer(MEDIA,_STORE,current_tags,_write_changed_tags)
 
 
@@ -1455,9 +1472,9 @@ class PluginToggleIn(BaseModel):
 
 
 @app.get("/api/plugins")
-def api_plugins():
-    """插件（数据源）清单：元数据 + 启用状态 + 调用统计。"""
-    return {"plugins": _PLUGINS.list()}
+def api_plugins(include_removed: int = 0):
+    """插件（数据源）清单：元数据 + 状态 + 统计；include_removed=1 时附带已删除的内置源。"""
+    return _PLUGINS.snapshot(include_removed=bool(include_removed))
 
 
 @app.post("/api/plugins/toggle")
@@ -1466,7 +1483,89 @@ def api_plugins_toggle(b: PluginToggleIn):
         _PLUGINS.set_enabled(b.id, bool(b.enabled))
     except KeyError:
         raise HTTPException(404, "unknown plugin: " + str(b.id))
-    return {"ok": True, "plugins": _PLUGINS.list()}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "plugins": _PLUGINS.snapshot()["plugins"]}
+
+
+class PluginSaveIn(BaseModel):
+    id: Optional[str] = None
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    order: Optional[int] = None
+    params: Optional[dict] = None
+    search_url: Optional[str] = None
+    method: Optional[str] = None
+    headers: Optional[dict] = None
+    timeout: Optional[float] = None
+    limit: Optional[int] = None
+    result_path: Optional[str] = None
+    fields: Optional[dict] = None
+    enabled: Optional[bool] = None
+
+
+class PluginIdIn(BaseModel):
+    id: str
+
+
+class PluginTestIn(BaseModel):
+    id: Optional[str] = None
+    config: Optional[dict] = None
+    q: str = "test"
+
+
+@app.post("/api/plugins/save")
+def api_plugins_save(b: PluginSaveIn):
+    """新建（无 id）或编辑（有 id）插件；内置源只允许改显示名 / 描述 / 排序 / 参数。"""
+    payload = b.model_dump(exclude_none=True)
+    try:
+        item = _PLUGINS.save(payload)
+    except KeyError as e:
+        raise HTTPException(404, "unknown plugin: " + str(e))
+    except (ValueError, TypeError) as e:
+        raise HTTPException(400, str(e))
+    if payload.get("enabled") is not None:
+        try:
+            _PLUGINS.set_enabled(item["id"], bool(payload["enabled"]))
+        except ValueError:
+            pass
+        item = _PLUGINS.get(item["id"])
+    return {"ok": True, "plugin": item, "plugins": _PLUGINS.snapshot()["plugins"]}
+
+
+@app.post("/api/plugins/delete")
+def api_plugins_delete(b: PluginIdIn):
+    """删除插件：内置源移入「已删除」（可恢复），自定义源真删。"""
+    try:
+        info = _PLUGINS.delete(b.id)
+    except KeyError:
+        raise HTTPException(404, "unknown plugin: " + str(b.id))
+    return {"ok": True, "deleted": info, "plugins": _PLUGINS.snapshot()["plugins"]}
+
+
+@app.post("/api/plugins/restore")
+def api_plugins_restore(b: PluginIdIn):
+    """恢复被删除的内置源。"""
+    try:
+        _PLUGINS.restore(b.id)
+    except KeyError:
+        raise HTTPException(404, "plugin is not removed: " + str(b.id))
+    return {"ok": True, "plugins": _PLUGINS.snapshot()["plugins"]}
+
+
+@app.post("/api/plugins/test")
+def api_plugins_test(b: PluginTestIn):
+    """试跑一次自定义数据源（保存前也可测），返回样例便于校对字段映射。"""
+    if b.config:
+        defn = dict(b.config)
+        defn.setdefault("id", "custom-preview")
+    elif b.id:
+        defn = _PLUGINS.custom_definition(b.id)
+        if defn is None:
+            raise HTTPException(400, "只能试跑自定义数据源")
+    else:
+        raise HTTPException(400, "需要提供 id 或 config")
+    return _custom_test(defn, b.q)
 
 
 @app.get('/api/system')
