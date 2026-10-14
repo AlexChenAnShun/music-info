@@ -1221,7 +1221,7 @@ def _must_expected(value):
     if not value or not re.fullmatch(r'[0-9a-f]{64}', value):
         raise HTTPException(400, '请刷新页面并提供当前文件版本；未经版本核验不允许写入')
 
-_APP_VERSION = '2026.10-workflow.1'
+_APP_VERSION = '2026.10-workflow.2'
 _legacy_current_tags = current_tags
 
 
@@ -1646,5 +1646,234 @@ def workflow_restore(version_id: str,body: RestoreIn):
     try: return _WRITER.restore(version_id,body.expected_version)
     except KeyError: raise HTTPException(404,'记录不存在')
 
+
+
+# ===== V4.1：统一出网代理 + 实时日志（SSE） =====
+import collections as _collections
+import logging as _logging
+import queue as _queue
+import threading as _threading
+from urllib.parse import urlparse as _urlparse
+
+from fastapi.responses import StreamingResponse as _StreamingResponse
+
+_LOG = _logging.getLogger('musicinfo')
+_LOG.setLevel(_logging.INFO)
+
+_DATA_DIR = os.environ.get('DATA_DIR', '/app/data')
+_SETTINGS_FILE = os.path.join(_DATA_DIR, 'settings.json')
+_SET_LOCK = _threading.Lock()
+
+
+def _default_settings():
+    return {'proxy': {'enabled': False, 'url': ''}}
+
+
+def _load_app_settings():
+    cfg = _default_settings()
+    try:
+        with open(_SETTINGS_FILE, 'r', encoding='utf-8') as fh:
+            raw = json.load(fh)
+    except Exception:
+        raw = None
+    if isinstance(raw, dict):
+        node = raw.get('proxy')
+        if isinstance(node, dict):
+            cfg['proxy']['enabled'] = bool(node.get('enabled'))
+            url = node.get('url')
+            cfg['proxy']['url'] = url.strip() if isinstance(url, str) else ''
+    return cfg
+
+
+_SETTINGS = _load_app_settings()
+
+
+def _save_app_settings():
+    with _SET_LOCK:
+        os.makedirs(_DATA_DIR, exist_ok=True)
+        tmp = _SETTINGS_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as fh:
+            json.dump(_SETTINGS, fh, ensure_ascii=False, indent=2)
+        os.replace(tmp, _SETTINGS_FILE)
+
+
+def _proxy_url():
+    node = _SETTINGS.get('proxy') or {}
+    return (node.get('url') or '').strip() if node.get('enabled') else ''
+
+
+def _valid_proxy_url(url):
+    if not url:
+        return True
+    if len(url) > 300 or any(ch.isspace() for ch in url):
+        return False
+    try:
+        parsed = _urlparse(url)
+        port = parsed.port
+    except Exception:
+        return False
+    if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+        return False
+    return port is None or 0 < port < 65536
+
+
+def _apply_proxy_env():
+    url = _proxy_url()
+    for key in ('HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy'):
+        if url:
+            os.environ[key] = url
+        else:
+            os.environ.pop(key, None)
+    if url:
+        os.environ['NO_PROXY'] = os.environ['no_proxy'] = 'localhost,127.0.0.1,::1'
+    else:
+        os.environ.pop('NO_PROXY', None)
+        os.environ.pop('no_proxy', None)
+
+
+_apply_proxy_env()
+
+# ---- 日志环形缓冲 + SSE 广播 ----
+_LOG_LIMIT = 3000
+_LOG_LINES = _collections.deque(maxlen=_LOG_LIMIT)
+_LOG_QUEUES = []
+_LOG_SEQ = [0]
+_LOG_RANK = {'DEBUG': 10, 'INFO': 20, 'WARNING': 30, 'ERROR': 40, 'CRITICAL': 50}
+
+
+class _LogCapture(_logging.Handler):
+    def __init__(self):
+        super().__init__()
+        self.setFormatter(_logging.Formatter())
+
+    def emit(self, record):
+        try:
+            msg = record.getMessage()
+            if record.exc_info:
+                msg += '\n' + self.formatter.formatException(record.exc_info)
+        except Exception:
+            msg = str(record.msg)
+        _LOG_SEQ[0] += 1
+        item = {'id': _LOG_SEQ[0], 'ts': int(record.created * 1000),
+                'level': record.levelname, 'src': record.name, 'msg': msg}
+        _LOG_LINES.append(item)
+        for q in list(_LOG_QUEUES):
+            try:
+                q.put_nowait(item)
+            except Exception:
+                pass
+
+
+_capture = _LogCapture()
+_capture.setLevel(_logging.DEBUG)
+for _target_name in ('uvicorn.error', 'uvicorn.access', 'musicinfo'):
+    _target_logger = _logging.getLogger(_target_name)
+    _target_logger.addHandler(_capture)
+    if _target_logger.level == _logging.NOTSET or _target_logger.level > _logging.INFO:
+        _target_logger.setLevel(_logging.INFO)
+
+_LOG.info('服务启动：出网代理%s · 实时日志缓冲就绪（%d 行）', ('已启用 ' + _proxy_url()) if _proxy_url() else '未启用（直连）', _LOG_LIMIT)
+
+
+class SettingsIn(BaseModel):
+    proxy: Optional[dict] = None
+
+
+class ProxyTestIn(BaseModel):
+    url: Optional[str] = None
+
+
+@app.get('/api/settings')
+def api_settings():
+    return {'settings': _SETTINGS}
+
+
+@app.post('/api/settings')
+def api_settings_save(b: SettingsIn):
+    node = b.proxy if isinstance(b.proxy, dict) else {}
+    url = str(node.get('url') or '').strip()
+    if not _valid_proxy_url(url):
+        raise HTTPException(400, '代理地址无效：需以 http:// 或 https:// 开头，例如 http://10.0.0.77:7890')
+    enabled = bool(node.get('enabled'))
+    if enabled and not url:
+        raise HTTPException(400, '启用代理前请先填写代理地址')
+    _SETTINGS['proxy'] = {'enabled': enabled, 'url': url}
+    _save_app_settings()
+    _apply_proxy_env()
+    _LOG.info('代理设置已保存：%s · %s', '启用' if enabled else '未启用', url or '（未填写地址）')
+    return {'ok': True, 'settings': _SETTINGS}
+
+
+@app.post('/api/settings/test_proxy')
+def api_settings_test_proxy(b: ProxyTestIn):
+    url = str(b.url or '').strip()
+    if url and not _valid_proxy_url(url):
+        raise HTTPException(400, '代理地址无效：需以 http:// 或 https:// 开头')
+    proxies = {'http': url, 'https': url} if url else None
+    targets = [
+        'https://itunes.apple.com/search?term=music&limit=1',
+        'https://musicbrainz.org/ws/2/artist?query=music&fmt=json&limit=1',
+    ]
+    results = []
+    for target in targets:
+        t0 = time.time()
+        try:
+            resp = requests.get(target, proxies=proxies, timeout=8, headers={'User-Agent': MB_UA})
+            ok = resp.status_code < 400
+            results.append({'target': target, 'ok': ok, 'status': resp.status_code,
+                            'ms': int((time.time() - t0) * 1000), 'error': '' if ok else ('HTTP %d' % resp.status_code)})
+        except Exception as exc:
+            results.append({'target': target, 'ok': False, 'status': 0,
+                            'ms': int((time.time() - t0) * 1000), 'error': str(exc)[:200]})
+        if results[-1]['ok']:
+            break
+    ok = bool(results) and results[0]['ok']
+    _LOG.info('代理测试：%s · %s', url or '直连（不填地址）',
+              ('通过 %dms' % results[0]['ms']) if ok else ('失败：' + (results[0].get('error') or '')))
+    return {'ok': ok, 'results': results, 'url': url}
+
+
+@app.get('/api/logs')
+def api_logs(limit: int = 400, level: str = '', q: str = ''):
+    limit = max(1, min(limit, 5000))
+    floor = _LOG_RANK.get((level or '').strip().upper(), 0)
+    needle = (q or '').strip().lower()
+    out = []
+    for item in reversed(_LOG_LINES):
+        if floor and _LOG_RANK.get(item['level'], 20) < floor:
+            continue
+        if needle and needle not in (item['msg'] + ' ' + item['src'] + ' ' + item['level']).lower():
+            continue
+        out.append(item)
+        if len(out) >= limit:
+            break
+    out.reverse()
+    return {'logs': out, 'total': len(_LOG_LINES), 'seq': _LOG_SEQ[0], 'limit': limit}
+
+
+def _log_stream_gen():
+    q = _queue.Queue(maxsize=2000)
+    _LOG_QUEUES.append(q)
+
+    try:
+        yield 'retry: 3000\n\n'
+        while True:
+            try:
+                item = q.get(timeout=15)
+            except _queue.Empty:
+                yield ': keep-alive\n\n'
+                continue
+            yield 'data: ' + json.dumps(item, ensure_ascii=False) + '\n\n'
+    finally:
+        try:
+            _LOG_QUEUES.remove(q)
+        except ValueError:
+            pass
+
+
+@app.get('/api/logs/stream')
+def api_logs_stream():
+    return _StreamingResponse(_log_stream_gen(), media_type='text/event-stream',
+                              headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no', 'Connection': 'keep-alive'})
 
 app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static"), html=True), name="static")
