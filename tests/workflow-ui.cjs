@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),assert=require('assert');
 let pw;for(const name of ['playwright','playwright-core']){try{pw=require(require.resolve(name,{paths:[path.resolve('blog/browser-tests'),process.cwd()]}));break}catch{}}if(!pw)throw Error('Existing Playwright not resolved');
-const html=fs.readFileSync('music-tag-lite-ui/index.html','utf8');
+const html=fs.readFileSync('backend/static/index.html','utf8');
 const PNG=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aR3sAAAAASUVORK5CYII=','base64');
 const FIELDS=['title','artist','album','albumartist','date','track','tracktotal','disc','disctotal','genre','language','albumtype','comment','description','version','lyrics','lrc'];
 const makeTrack=(name)=>({...Object.fromEntries(FIELDS.map(k=>[k,''])),path:name,name,title:name.startsWith('One')?'Old title':'Other title',artist:'Test artist',album:'Test album',version:'Original edition',size:3000000,has_cover:false,file_version:'a'.repeat(64),file_id:name,capabilities:{fields:FIELDS,cover:true},tech:{duration:180,bitrate:128,sample_rate:44100,bits:16,channels:2}});
