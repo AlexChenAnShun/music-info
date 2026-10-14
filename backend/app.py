@@ -583,7 +583,7 @@ def _backfill_covers(out):
 @app.get("/api/mb_search")
 def mb_search(q: str):
     try:
-        out = mb_search_raw(q)
+        out = _timed("mb", mb_search_raw, q)
     except Exception as e:
         raise HTTPException(502, f"musicbrainz failed: {e}")
     return {"results": out}
@@ -692,7 +692,7 @@ def ncm_lyric_raw(song_id: str):
 
 @app.get("/api/ncm_search")
 def ncm_search(q: str, limit: int = 10):
-    out = ncm_search_raw(q, limit)
+    out = _timed("netease", ncm_search_raw, q, limit)
     if not out:
         raise HTTPException(502, "netease unreachable or no results")
     return {"results": out}
@@ -744,7 +744,7 @@ def migu_lyric_raw(song_id: str) -> str:
 @app.get("/api/migu_search")
 def migu_search(q: str, limit: int = 10):
     try:
-        return {"results": migu_search_raw(q, limit)}
+        return {"results": _timed("migu", migu_search_raw, q, limit)}
     except Exception as e:
         raise HTTPException(502, f"migu unreachable: {e}")
 
@@ -807,7 +807,7 @@ def qq_lyric_raw(songmid: str) -> str:
 @app.get("/api/qq_search")
 def qq_search(q: str, limit: int = 10):
     try:
-        return {"results": qq_search_raw(q, limit)}
+        return {"results": _timed("qq", qq_search_raw, q, limit)}
     except Exception as e:
         raise HTTPException(502, f"qqmusic unreachable: {e}")
 
@@ -869,7 +869,7 @@ def kugou_lyric_raw(filehash: str) -> str:
 @app.get("/api/kugou_search")
 def kugou_search(q: str, limit: int = 10):
     try:
-        return {"results": kugou_search_raw(q, limit)}
+        return {"results": _timed("kugou", kugou_search_raw, q, limit)}
     except Exception as e:
         raise HTTPException(502, f"kugou unreachable: {e}")
 
@@ -927,7 +927,7 @@ def kuwo_lyric_raw(rid: str) -> str:
 @app.get("/api/kuwo_search")
 def kuwo_search(q: str, limit: int = 10):
     try:
-        return {"results": kuwo_search_raw(q, limit)}
+        return {"results": _timed("kuwo", kuwo_search_raw, q, limit)}
     except Exception as e:
         raise HTTPException(502, f"kuwo unreachable: {e}")
 
@@ -967,7 +967,7 @@ def itunes_search_raw(q: str, limit: int = 10):
 @app.get("/api/itunes_search")
 def itunes_search(q: str, limit: int = 10):
     try:
-        return {"results": itunes_search_raw(q, limit)}
+        return {"results": _timed("itunes", itunes_search_raw, q, limit)}
     except Exception as e:
         raise HTTPException(502, f"itunes unreachable: {e}")
 
@@ -991,7 +991,7 @@ def deezer_search_raw(q: str, limit: int = 10):
 @app.get("/api/deezer_search")
 def deezer_search(q: str, limit: int = 10):
     try:
-        return {"results": deezer_search_raw(q, limit)}
+        return {"results": _timed("deezer", deezer_search_raw, q, limit)}
     except Exception as e:
         raise HTTPException(502, f"deezer unreachable: {e}")
 
@@ -1038,7 +1038,8 @@ _SMART_JOBS = [("migu", migu_search_raw), ("qq", qq_search_raw),
 def smart_search_raw(q: str, artist: str = "", album: str = "", limit: int = 15):
     per_source, out = {}, []
     with ThreadPoolExecutor(max_workers=8) as pool:
-        futs = {pool.submit(fn, q, 8): name for name, fn in _SMART_JOBS}
+        active = [(name, fn) for name, fn in _SMART_JOBS if _PLUGINS.is_enabled(name)]
+        futs = {pool.submit(_timed, name, fn, q, 8): name for name, fn in active}
         try:
             done = as_completed(futs, timeout=25)
             for fut in done:
@@ -1142,7 +1143,7 @@ def lrclib_lyric_raw(artist: str, title: str, album: str = ""):
 @app.get("/api/lrclib_lyric")
 def lrclib_lyric(artist: str, title: str, album: str = ""):
     try:
-        lyric, synced = lrclib_lyric_raw(artist, title, album)
+        lyric, synced = _timed("lrclib", lrclib_lyric_raw, artist, title, album)
     except Exception as e:
         raise HTTPException(502, f"lrclib failed: {e}")
     return {"lyric": lyric, "synced": synced}
@@ -1193,7 +1194,7 @@ def fp_search(path: str):
     if not p.is_file():
         raise HTTPException(404, "not found")
     try:
-        return {"results": fp_lookup_raw(p)}
+        return {"results": _timed("acoustid", fp_lookup_raw, p)}
     except HTTPException:
         raise
     except Exception as e:
@@ -1208,6 +1209,7 @@ from typing import Literal as _Literal
 from pydantic import Field as _Field, ConfigDict as _ConfigDict
 from fastapi import Request as _Request
 from mtl_store import Store as _Store
+from mtl_plugins import PluginRegistry as _PluginRegistry
 from mtl_safe import Writer as _Writer, FIELDS as _FIELDS, image_payload as _image_payload, cover_bytes as _cover_bytes, root_path as _root_path
 from mtl_jobs import Engine as _Engine
 
@@ -1321,6 +1323,21 @@ def _write_changed_tags(path, changes, original):
 
 
 _STORE = _Store(os.environ.get('DATA_DIR','/app/data'))
+_PLUGINS = _PluginRegistry(os.environ.get('DATA_DIR','/app/data'))
+
+
+def _timed(pid, fn, *args, **kwargs):
+    """调用某个数据源并记录统计；已停用的插件直接拒绝。"""
+    if not _PLUGINS.is_enabled(pid):
+        raise RuntimeError(f"plugin disabled: {pid}")
+    t0 = time.time()
+    try:
+        out = fn(*args, **kwargs)
+    except Exception:
+        _PLUGINS.record(pid, False, int((time.time() - t0) * 1000))
+        raise
+    _PLUGINS.record(pid, True, int((time.time() - t0) * 1000))
+    return out
 _WRITER = _Writer(MEDIA,_STORE,current_tags,_write_changed_tags)
 
 
@@ -1430,6 +1447,26 @@ async def workflow_request_guard(request: _Request, call_next):
             if urlparse(origin).netloc.lower()!=host.lower():
                 return JSONResponse({'detail':'不允许跨站写入'},status_code=403)
     return await call_next(request)
+
+
+class PluginToggleIn(BaseModel):
+    id: str
+    enabled: bool
+
+
+@app.get("/api/plugins")
+def api_plugins():
+    """插件（数据源）清单：元数据 + 启用状态 + 调用统计。"""
+    return {"plugins": _PLUGINS.list()}
+
+
+@app.post("/api/plugins/toggle")
+def api_plugins_toggle(b: PluginToggleIn):
+    try:
+        _PLUGINS.set_enabled(b.id, bool(b.enabled))
+    except KeyError:
+        raise HTTPException(404, "unknown plugin: " + str(b.id))
+    return {"ok": True, "plugins": _PLUGINS.list()}
 
 
 @app.get('/api/system')
