@@ -109,15 +109,19 @@ class Store:
             conn.execute("UPDATE files SET path=?,version=?,tags=?,updated=? WHERE id=?", (path, version, dumps(tags), now(), file_id))
 
     def create_job(self, kind, items, options):
-        if kind not in ('preview', 'apply') or not 1 <= len(items) <= 50:
-            raise ValueError('任务类型无效，或曲目数不在 1–50 范围内')
+        # 整理类任务：扫描只读（1 条）；执行按文件逐条，上限放宽到 5000。
+        limit = 5000 if str(kind).startswith('organize') else 50
+        if kind not in ('preview', 'apply', 'organize_scan', 'organize_apply') or not 1 <= len(items) <= limit:
+            raise ValueError('任务类型无效，或曲目数不在 1–%d 范围内' % limit)
         job_id = str(uuid.uuid4())
         created = now()
         with self.connect(write=True) as conn:
             conn.execute("INSERT INTO jobs(id,kind,status,options,created,updated,total) VALUES(?,?,'pending',?,?,?,?)", (job_id, kind, dumps(options), created, created, len(items)))
             for ordinal, item in enumerate(items):
                 conn.execute("INSERT INTO job_items(id,job_id,ordinal,path,status,input) VALUES(?,?,?,?,'pending',?)", (str(uuid.uuid4()), job_id, ordinal, item['path'], dumps(item)))
-            conn.execute("INSERT INTO job_logs(job_id,at,level,message) VALUES(?,?,'info',?)", (job_id, created, '任务已创建；预览任务不会写入音乐。' if kind == 'preview' else '已接受用户确认的写入任务。'))
+            conn.execute("INSERT INTO job_logs(job_id,at,level,message) VALUES(?,?,'info',?)", (job_id, created, {'preview': '任务已创建；预览任务不会写入音乐。',
+             'organize_scan': '已创建整理扫描任务：只读扫描，不移动任何文件。',
+             'organize_apply': '已接受用户确认的整理任务：逐条移动文件，不删除、不覆盖。'}.get(kind, '已接受用户确认的写入任务。')))
         return job_id
 
     def claim_job(self):
@@ -185,7 +189,7 @@ class Store:
     def recover_jobs(self):
         # Never repeat an interrupted write automatically after a process restart.
         with self.connect(write=True) as conn:
-            ids = [row[0] for row in conn.execute("SELECT id FROM jobs WHERE status='running' OR (kind='apply' AND status='pending')")]
+            ids = [row[0] for row in conn.execute("SELECT id FROM jobs WHERE status='running' OR (kind IN ('apply','organize_apply') AND status='pending')")]
             for job_id in ids:
                 conn.execute("UPDATE jobs SET status='interrupted',updated=?,error=? WHERE id=?", (now(), '服务重启使任务中断，请检查结果后重新生成预览。', job_id))
                 conn.execute("UPDATE job_items SET status='interrupted',error=? WHERE job_id=? AND status IN ('running','pending')", ('任务中断；不会自动重放写入。', job_id))

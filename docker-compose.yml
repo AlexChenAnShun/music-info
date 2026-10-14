@@ -12,8 +12,9 @@ services:
       FANART_API_KEY: "${FANART_API_KEY:-}"
       ACOUSTID_CLIENT_KEY: "${ACOUSTID_CLIENT_KEY:-}"
     volumes:
-      # 把 /path/to/your/music 改成你自己的音乐目录；建议只读挂载
-      - /path/to/your/music:/app/media:ro
+      # 把 /path/to/your/music 改成你自己的音乐目录
+      # 「本地自动整理」要移动文件，挂载需要 rw；只想改元数据可用 ro
+      - /path/to/your/music:/app/media:rw
       - ./data:/app/data
     restart: unless-stopped
     healthcheck:

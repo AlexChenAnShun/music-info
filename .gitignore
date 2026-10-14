@@ -44,3 +44,4 @@ Thumbs.db
 *.wav
 *.ape
 *.lrc
+.integrate-backup-*/

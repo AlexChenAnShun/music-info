@@ -1221,7 +1221,7 @@ def _must_expected(value):
     if not value or not re.fullmatch(r'[0-9a-f]{64}', value):
         raise HTTPException(400, '请刷新页面并提供当前文件版本；未经版本核验不允许写入')
 
-_APP_VERSION = '2026.10-workflow.2'
+_APP_VERSION = '2026.10-workflow.3'
 _legacy_current_tags = current_tags
 
 
@@ -1407,6 +1407,8 @@ def _preview_one(item,options):
 
 
 def _run_job_item(kind,item,options):
+    if kind=='organize_scan': return _ORGANIZE.run_scan(item,options,store=_STORE,job_id=_jobs.current_job())
+    if kind=='organize_apply': return _ORGANIZE.run_apply_item(item,options,store=_STORE,job_id=_jobs.current_job())
     if kind=='preview': return _preview_one(item,options)
     if kind=='apply':
         if not item.get('expected_version'): raise HTTPException(400,'写入任务缺少预览版本')
@@ -1875,5 +1877,26 @@ def _log_stream_gen():
 def api_logs_stream():
     return _StreamingResponse(_log_stream_gen(), media_type='text/event-stream',
                               headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no', 'Connection': 'keep-alive'})
+
+# ---------------------------------------------------------------- V4.2 本地自动整理
+# 只新增 /api/organize/* 端点；任务仍然走 _STORE + _ENGINE，
+# 过程日志进现有实时日志缓冲（来源 musicinfo.organize）。
+import mtl_jobs as _jobs                   # noqa: E402
+import mtl_organize as _ORGANIZE           # noqa: E402
+import mtl_organize_api as _ORGANIZE_API   # noqa: E402
+
+
+def _organize_log(message, level='info'):
+    """把整理过程写进实时日志（环形缓冲 + SSE）。"""
+    _logging.getLogger('musicinfo.organize').log(
+        {'debug': _logging.DEBUG, 'info': _logging.INFO, 'warning': _logging.WARNING,
+         'error': _logging.ERROR, 'critical': _logging.CRITICAL}.get(str(level or 'info').lower(),
+                                                                     _logging.INFO),
+        str(message))
+
+
+_ORGANIZE_API.register(app, _STORE, _ENGINE, _SETTINGS,
+                       persist_settings=_save_app_settings, log=_organize_log)
+
 
 app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static"), html=True), name="static")

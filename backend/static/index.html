@@ -238,8 +238,88 @@ body:has(#view-work:not(.hidden)){height:100dvh;overflow:hidden}
 .settings-pane{min-width:0}
 @media(max-width:860px){.settings-shell{grid-template-columns:1fr}.settings-tabs{flex-direction:row;overflow-x:auto;position:static;padding-bottom:2px}.settings-tab{min-width:148px;flex:1}}
 
-</style></head><body>
-<header class="appbar"><div class="brand"><div class="brand-icon" aria-hidden="true">♫</div><div><h1>Music Info</h1><small>YOUR LOCAL MUSIC WORKBENCH</small></div></div><nav class="bar-nav" aria-label="主导航"><button class="nav-btn active" data-view="work" onclick="showView('work')">工作台</button><button class="nav-btn" data-view="tasks" onclick="showView('tasks')">任务中心 <span id="active-job-count"></span></button><button class="nav-btn" data-view="history" onclick="showView('history')">修改记录</button><button class="nav-btn" data-view="logs" onclick="showView('logs')">实时日志</button><button class="nav-btn" data-view="settings" onclick="showView('settings')">设置</button></nav><div class="bar-right"><span class="db-pill"><i class="status-dot"></i><span id="db-label">SQLite · 本地持久化</span></span><button class="btn icon-btn" id="settings-btn" title="设置" aria-label="打开设置" onclick="openSettings()">⚙</button><span id="clock" class="small-label"></span></div></header>
+/* ===== V4.2 本地自动整理 ===== */
+.org-grid{display:grid;grid-template-columns:minmax(0,392px) minmax(0,1fr);gap:18px;align-items:start}
+.org-card{padding:20px}
+.org-card .field{margin-bottom:11px}
+.org-path-state{font-size:11.5px;color:#6f7a8c;white-space:nowrap}
+.org-path-state.ok{color:#168167}
+.org-path-state.missing{color:#a96718}
+.org-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+.org-tab{border:1px solid #e3e6ee;background:#fff;border-radius:999px;padding:6px 12px;font-size:12.5px;color:#5b6478;font-weight:600}
+.org-tab.active{background:#f1ecff;border-color:#ddd1ff;color:#6a4fd0}
+.org-tab .n{opacity:.72;margin-left:4px;font-size:11.5px}
+.org-dest{font-size:11.5px;color:#5f6a7e;word-break:break-all;line-height:1.6}
+.org-reason{font-size:11.5px;color:#6f7a8c;line-height:1.6}
+.org-name{font-weight:650;word-break:break-all}
+.org-src{font-size:11px;color:#8e97a8;word-break:break-all;margin-top:2px}
+.org-plan-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.org-plan-head h3{margin:4px 0 0;font-size:17px;word-break:break-all}
+.org-count-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.org-actions{display:flex;gap:8px;flex-wrap:wrap}
+.org-progress-wrap{margin:12px 0 4px}
+.org-progress-label{font-size:12px;color:#5f6a7e;margin-top:6px}
+.org-stat-line{display:block;font-size:11.5px;color:#8e97a8;margin-top:4px;font-weight:500}
+.org-empty-note{font-size:12.5px;color:#6f7a8c}
+.org-rule-list{display:flex;flex-direction:column;gap:7px;margin:2px 0 4px}
+.org-rule{display:flex;justify-content:space-between;gap:12px;align-items:baseline;background:#fafbfe;border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+.org-rule span{font-size:12px;color:#6f7a8c;white-space:nowrap}
+.org-rule b{font-size:12.5px;color:#2b3347;font-weight:650;word-break:break-all;text-align:right}
+#pane-organize .field-grid{margin-bottom:10px}
+.org-notice{margin-bottom:14px;background:#fffaf1;border-color:#f4e3c8;color:#8a5a17}
+.org-hint{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#eceef5;color:#6b7280;font-size:10.5px;font-style:normal;font-weight:700;cursor:help;margin-left:4px}
+.org-abs{font-size:11.5px;color:#8e97a8;word-break:break-all;line-height:1.5}
+.org-picker-dialog{max-width:640px}
+.org-pick-crumbs{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin:2px 0 10px}
+.org-crumb{border:0;background:transparent;color:#5b6577;font-size:12.5px;font-weight:600;padding:2px 5px;border-radius:7px}
+.org-crumb:hover{background:#f2f4f8;color:#2b3347}
+.org-crumb-sep{color:#b9c0cd;font-size:11px}
+.org-pick-list{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;padding:6px}
+.org-pick-row{display:block;width:100%;text-align:left;border:0;background:#fff;border-radius:9px;padding:9px 11px;margin-bottom:5px;font-size:13px;color:#2b3347;font-weight:600}
+.org-pick-row:hover{background:#f2f0ff;color:#5b43c0}
+.org-pick-row.up{background:#f5f6fa;color:#5b6577;font-weight:650}
+.org-pick-new{display:flex;gap:8px;margin:10px 0 8px}
+.org-pick-new input{flex:1;min-width:0;border:1px solid #e3e6ee;border-radius:9px;padding:8px 10px;font-size:13px}
+.org-pick-current{font-size:12.5px;color:#5b6577;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.org-pick-current b{color:#2b3347;word-break:break-all}
+@media(max-width:1160px){.org-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:1160px){.org-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* 自动整理 · 设置页子标签（V4.3：重命名规则 / 二级分类 / 洗版策略） */
+.org-subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 14px;border-bottom:1px solid var(--line);padding-bottom:11px}
+.org-subtab{border:1px solid #e3e6ee;background:#fff;border-radius:999px;padding:6px 13px;font-size:12.5px;color:#5b6478;font-weight:600}
+.org-subtab:hover{background:#f5f6fa}
+.org-subtab.active{background:#f1ecff;border-color:#ddd1ff;color:#6a4fd0}
+.org-sub{display:flex;flex-direction:column;gap:12px}
+.org-sub h4{margin:6px 0 0;font-size:13.5px;color:#2b3347}
+.org-help-grid{display:grid;grid-template-columns:minmax(0,180px) minmax(0,1fr);gap:7px 14px;font-size:12.5px;color:#5f6a7e;background:#fafbfe;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.org-help-grid b{color:#3a4257;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:650;word-break:break-all}
+.org-help-grid code{background:#eef1f7;border-radius:5px;padding:1px 5px;font-size:11.5px}
+.org-help-code{background:#f7f8fc;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:12px;line-height:1.65;color:#3a4257;overflow:auto;white-space:pre;margin:0}
+#org-in-classify{width:100%;min-height:210px;height:auto;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6;border:1px solid #e3e6ee;border-radius:10px;padding:10px 12px;background:#fbfcfe;color:#2b3347}
+.org-preview{display:flex;flex-direction:column;gap:7px}
+.org-preview-row{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;background:#fafbfe;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12.5px}
+.org-preview-row span:first-child{color:#6f7a8c;min-width:104px}
+.org-preview-row code{color:#2b3347;font-size:12.5px;word-break:break-all;font-weight:650}
+
+/* 只读的目录固定值（容器内路径）+ NAS 真实路径小字 */
+.org-dir-list{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.org-dir{display:flex;flex-direction:column;gap:6px;background:#fafbfe;border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.org-dir-label{font-size:12.5px;color:#5b6577;font-weight:650}
+.org-dir .filename-row{align-items:center}
+.org-dir .org-abs{margin-top:1px}
+/* 只读目录框：看起来像普通输入框（浅灰描边 + 淡底），不是浏览器默认的丑黑框 */
+.org-dir .filename-row{flex-wrap:nowrap}
+.org-dir .filename-row .btn{flex:0 0 auto}
+input.org-ro{flex:1 1 auto;min-width:0;width:100%;border:1px solid #e3e6ee;border-radius:9px;padding:8px 10px;
+  background:#f8f9fc;color:#3a4257;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  line-height:1.45;cursor:text;box-shadow:none}
+input.org-ro:hover{border-color:#d6dcea;background:#fff}
+input.org-ro:focus{outline:none;border-color:#c9b8ff;background:#fff;box-shadow:0 0 0 3px #efe9ff}
+input.org-ro::selection{background:#e5ddff}
+.org-rule b i{display:block;font-style:normal;font-weight:500;font-size:11px;color:#8e97a8;margin-top:2px;word-break:break-all}
+.org-pick-role{font-size:11.5px;color:#6f7a8c;margin:-4px 0 8px;line-height:1.6}</style></head><body>
+<header class="appbar"><div class="brand"><div class="brand-icon" aria-hidden="true">♫</div><div><h1>Music Info</h1><small>YOUR LOCAL MUSIC WORKBENCH</small></div></div><nav class="bar-nav" aria-label="主导航"><button class="nav-btn active" data-view="work" onclick="showView('work')">工作台</button><button class="nav-btn" data-view="tasks" onclick="showView('tasks')">任务中心 <span id="active-job-count"></span></button><button class="nav-btn" data-view="history" onclick="showView('history')">修改记录</button><button class="nav-btn" data-view="logs" onclick="showView('logs')">实时日志</button><button class="nav-btn" data-view="organize" onclick="showView('organize')">自动整理</button><button class="nav-btn" data-view="settings" onclick="showView('settings')">设置</button></nav><div class="bar-right"><span class="db-pill"><i class="status-dot"></i><span id="db-label">SQLite · 本地持久化</span></span><button class="btn icon-btn" id="settings-btn" title="设置" aria-label="打开设置" onclick="openSettings()">⚙</button><span id="clock" class="small-label"></span></div></header>
 <div class="page" id="view-work" data-center-pane="edit"><div class="page-heading"><div><span class="eyebrow">LIBRARY WORKSPACE</span><h2>整理曲库，每次修改都有迹可循。</h2><p>浏览文件 → 匹配预览 → 核对差异 → 确认写入；后台任务与元数据历史持续保留。</p></div><span class="counter"><strong id="library-count">—</strong> 首当前文件夹曲目</span></div><main class="workspace">
 <aside class="surface library" aria-label="曲库浏览器"><div class="panel-head"><div class="head-line"><h3>我的曲库</h3><button class="btn icon-btn" id="refresh-library" title="刷新当前目录" aria-label="刷新当前目录" style="min-height:28px;width:28px;font-size:14px">↻</button></div><div class="crumb" id="crumb">根目录</div><div class="search"><input id="filter" type="search" placeholder="搜索当前文件夹…" aria-label="搜索当前文件夹"></div></div><div class="library-toolbar"><label><input id="select-all" type="checkbox"> 全选显示项</label><span id="selection-count">已选 0 首</span></div><div class="sort-line"><span>排序</span><select id="sort-by" aria-label="歌曲排序"><option value="name">文件名 A–Z</option><option value="name-desc">文件名 Z–A</option><option value="size">文件大小</option><option value="mtime">最近修改</option></select><button class="btn" id="clear-selection" style="min-height:24px;font-size:11.5px;padding:2px 6px;margin-left:auto">清选</button></div><div id="match-legend" class="match-legend hidden"><span><i></i>低于 75%</span><span><i class="error-dot"></i>需核查</span><span>百分比为文本相似度</span></div><div id="song-list" class="song-list" role="listbox" aria-label="歌曲列表"><div class="empty-list">正在读取曲库…</div></div><div class="library-footer"><span id="folder-summary">等待曲库加载</span><button class="btn soft" id="go-parent" style="padding:5px 8px;min-height:26px;font-size:11.5px" disabled>上一级 ↑</button></div></aside>
 <div class="right"><section class="surface workbar"><div class="workbar-left"><div class="center-tabs" role="tablist" aria-label="中间工作区"><button type="button" id="center-tab-edit" data-center-tab="edit" class="active">标签信息</button><button type="button" id="center-tab-preview" data-center-tab="preview">整理预览 <span class="count" id="center-preview-count"></span></button></div><span class="pill purple" id="mode-badge">仅补空白</span><span class="workbar-label" id="selection-caption">请选择歌曲或勾选范围</span></div><div class="workbar-actions"><button class="btn soft" id="hero-batch">✧ 批量匹配预览</button><button class="btn primary" id="review-top-btn" onclick="showConfirm()" disabled>核对所选写入</button><button class="btn outline hidden" id="manual-top-btn" onclick="saveManual({preventDefault(){}})">保存手动修改</button><button class="btn outline" id="jump-preview">查看预览 ↓</button></div></section><div class="content-grid"><section class="surface editor" aria-label="标签编辑器"><div id="editor-empty" class="placeholder"><div class="graphic">♫</div><h3>从曲库挑选一首歌</h3><p>现有标签、封面和技术信息会显示在这里。也可以勾选多首歌曲，让后台生成整理预览。</p><div class="empty-steps"><span class="pill">1 选择歌曲</span><span class="pill">2 查看差异</span><span class="pill">3 确认写入</span></div><p style="margin-top:20px;font-size:11.5px">不会自动覆盖标签；每次已提交修改都有元数据快照。</p></div><div id="editor-loaded" class="hidden"><div class="editor-top"><div class="editor-top-head"><span class="eyebrow">TRACK INSPECTOR</span><span class="small-label" id="file-size"></span></div><div class="track-intro"><div class="cover-wrap"><img class="cover" id="cover" alt="当前歌曲封面"><div class="cover-btns"><button type="button" onclick="exportCover()">导出</button><button type="button" id="cover-import-btn" onclick="$('cover-file').click()">暂存导入</button><input type="file" id="cover-file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onchange="importCover(this)"></div></div><div class="details"><span class="mark">当前曲目</span><h2 id="track-heading">—</h2><p id="track-artist">—</p><span id="filename" class="filename"></span><div id="track-status" class="track-status"></div></div></div><div id="pending-cover-note" class="pending-cover-note hidden">封面已暂存，尚未写入。保存时与标签一起确认并提交。</div></div><div class="editor-body"><p class="section-title">基础标签</p><form id="tag-form" class="viewport-compact-form" autocomplete="off"><div class="compact-tag-grid"><label class="field compact-field viewport-span-2"><span>歌曲标题</span><input id="title" name="title" placeholder="歌曲标题"/></label>
@@ -265,9 +345,105 @@ body:has(#view-work:not(.hidden)){height:100dvh;overflow:hidden}
 <div class="page hidden" id="view-tasks"><div class="page-heading"><div><span class="eyebrow">PERSISTENT JOBS</span><h2>后台任务中心</h2><p>任务、进度与日志保存在 NAS；失败项可以重新生成预览，不会自动重放写入。</p></div><button class="btn outline" onclick="refreshTasks()">刷新任务</button></div><div class="stat-strip"><div class="stat-box">已记录任务<strong id="stat-jobs">—</strong></div><div class="stat-box">当前待处理<strong id="stat-active">—</strong></div><div class="stat-box">存储引擎<strong style="font-size:17px">SQLite / WAL</strong></div></div><div class="jobs-layout"><section class="surface list-panel"><div class="panel-title"><h3>最近任务</h3><span class="small-label">显示最近 30 条</span></div><div id="jobs-table"><div class="detail-empty">正在读取任务…</div></div></section><aside class="surface job-detail"><h3>任务详情</h3><div id="job-detail"><div class="detail-empty">选择一条任务查看曲目进度和日志</div></div></aside></div></div>
 <div class="page hidden" id="view-history"><div class="page-heading"><div><span class="eyebrow">METADATA VERSIONS</span><h2>修改记录与回退</h2><p>每次提交都有元数据快照；回退也会生成一条新的记录。</p></div><button class="btn outline" onclick="historyFilter=null;refreshHistory()">查看全部记录</button></div><section class="surface list-panel"><div class="history-explainer">历史只备份元数据、封面和外置歌词，不把音频本体写入数据库。回退前会核对音频身份与当前版本；不会覆盖同名其他文件，也不会自动删除歌曲。</div><div id="history-table"><div class="detail-empty">正在读取记录…</div></div></section></div>
 <div class="page hidden" id="view-logs"><div class="page-heading"><div><span class="eyebrow">LIVE CONSOLE</span><h2>实时日志</h2><p>服务端日志经 SSE 实时推送：接口访问、报错堆栈、代理与插件活动一目了然；支持关键字与级别过滤，可暂停、清空与下载。</p></div><button class="btn outline" onclick="logReconnect()">重新连接</button></div><section class="surface log-panel"><div class="log-toolbar"><div class="seg" id="log-level"><button data-lv="ALL" class="on">全部</button><button data-lv="INFO">信息</button><button data-lv="WARNING">警告</button><button data-lv="ERROR">错误</button></div><input id="log-q" placeholder="过滤关键字，例如 搜索 / 插件 / 错误"><label class="checkline"><input type="checkbox" id="log-follow" checked> 自动滚动</label><button class="btn outline" id="log-pause">暂停</button><button class="btn outline" id="log-clear" onclick="logClear()">清空</button><button class="btn outline" id="log-download" onclick="logDownload()">下载</button><span class="pill gray" id="log-status">未连接</span></div><div class="log-console" id="log-body"><div class="log-empty">等待日志…</div></div><div class="log-foot"><span class="small-label" id="log-count">0 行</span><span class="small-label" id="log-total"></span></div></section></div>
-<div class="page hidden" id="view-settings"><div class="page-heading"><div><span class="eyebrow">PREFERENCES &amp; PLUGINS</span><h2>设置与插件库</h2><p>工作台偏好保存在此浏览器；插件库中的标签源、声纹与歌词服务可单独启停，停用的插件不参与融合搜索。</p></div><button class="btn outline" onclick="showSettingsTab('plugins')">刷新插件</button></div><div class="settings-shell"><nav class="settings-tabs" id="settings-tabs"><button class="settings-tab active" data-tab="prefs" onclick="showSettingsTab('prefs')"><b>工作台偏好</b><span>保存在本浏览器</span></button><button class="settings-tab" data-tab="plugins" onclick="showSettingsTab('plugins')"><b>插件库</b><span>数据源启停与统计</span></button><button class="settings-tab" data-tab="net" onclick="showSettingsTab('net')"><b>网络代理</b><span>服务端出网设置</span></button></nav><div class="settings-pane"><section class="surface settings-card" id="pane-prefs"><div class="panel-title"><h3>工作台偏好</h3><span class="small-label">保存在本浏览器</span></div><label class="field"><span>默认匹配来源</span><select id="set-source"></select></label><label class="checkline"><input id="set-only-empty" type="checkbox"> 默认只补空白</label><label class="checkline"><input id="set-include-lyrics" type="checkbox"> 默认尝试获取歌词</label><label class="checkline"><input id="set-include-cover" type="checkbox"> 默认预览封面</label><label class="field"><span>文件重命名模板</span><input id="set-template" placeholder="{artist} - {title}"></label><p class="helper">支持 {artist}、{title}、{album}、{track}、{date}、{year}。设置保存在此浏览器，任务和修改记录持久化在 NAS。</p><div class="dialog-actions"><button class="btn outline" onclick="resetSettings()">恢复默认</button><button class="btn primary" onclick="saveSettings()">保存设置</button></div></section><section class="surface list-panel hidden" id="pane-plugins"><div class="panel-title"><div><h3>插件库</h3><span class="small-label" id="plugin-summary">读取中…</span></div><div class="plugin-actions"><label class="checkline"><input id="show-removed" type="checkbox" onchange="loadPlugins(true)"> 显示已删除</label><button class="btn primary" onclick="openPluginEditor()">＋ 添加插件</button></div></div><p class="subtle">插件（数据源）可单独启停：停用后不再参与融合搜索，单源检索也会被拒绝；状态写入 NAS 数据目录，重启后保留。</p><div id="plugin-table"><div class="detail-empty">正在读取插件…</div></div></section><section class="surface settings-card hidden" id="pane-net"><div class="panel-title"><h3>网络代理</h3><span class="small-label">服务端生效 · 全部出网请求（搜索源 / 封面 / 歌词 / 声纹 / 插件自定义源）</span></div><div class="field-grid"><label class="field"><span>http 代理</span><input id="set-proxy-url" placeholder="http://10.0.0.77:7890"></label><label class="field"><span>状态</span><span class="small-label proxy-result" id="proxy-result">读取中…</span></label></div><label class="checkline"><input id="set-proxy-on" type="checkbox"> 启用代理（保存后立即生效，容器重启后保留）</label><p class="helper">直连可用时无需启用；遇到目标站点超时或想加速时再打开。启用前建议先点「测试连接」。</p><div class="dialog-actions"><button class="btn outline" onclick="testProxy()">测试连接</button><button class="btn primary" onclick="saveProxy()">保存代理</button></div></section></div></div></div>
+<div class="page hidden" id="view-organize"><div class="page-heading"><div><span class="eyebrow">LOCAL LIBRARY ORGANIZER</span><h2>自动整理</h2><p>扫描「未整理/待整理」：能识别的歌曲按 歌手/专辑/歌名 移入「已整理」，重复进「已存在」，无用文件进「冗余数据」。只移动，不删除、不覆盖。</p></div><div class="btn-row"><button class="btn outline" onclick="orgLoad()">刷新</button><button class="btn outline" onclick="orgOpenSettings()">整理设置</button><button class="btn primary" id="org-scan-btn" onclick="orgScan()">扫描待整理</button></div></div>
+<div class="stat-strip"><div class="stat-box">待整理<strong id="org-stat-source">—</strong><span class="org-stat-line" id="org-stat-source-size"></span></div><div class="stat-box">已整理<strong id="org-stat-library">—</strong><span class="org-stat-line" id="org-stat-library-size"></span></div><div class="stat-box">已存在 · 重复<strong id="org-stat-duplicates">—</strong><span class="org-stat-line" id="org-stat-duplicates-size"></span></div><div class="stat-box">冗余数据<strong id="org-stat-junk">—</strong><span class="org-stat-line" id="org-stat-junk-size"></span></div></div>
+<div class="org-grid">
+<section class="surface org-card"><div class="panel-title"><div><h3>整理规则</h3><span class="small-label" id="org-writable">读取中…</span></div><button class="btn outline" onclick="orgOpenSettings()">在设置中修改</button></div>
+<div class="org-rule-list">
+<div class="org-rule"><span>待整理（源）</span><b id="org-rule-source">—</b></div>
+<div class="org-rule"><span>重复 → 已存在</span><b id="org-rule-duplicates">—</b></div>
+<div class="org-rule"><span>冗余数据</span><b id="org-rule-junk">—</b></div>
+<div class="org-rule"><span>归档目录</span><b id="org-rule-library">—</b></div>
+<div class="org-rule"><span>命名模板</span><b id="org-rule-template">—</b></div>
+<div class="org-rule"><span>二级分类</span><b id="org-rule-classify">—</b></div>
+<div class="org-rule"><span>洗版策略</span><b id="org-rule-wash">—</b></div>
+<div class="org-rule"><span>附属文件</span><b id="org-rule-sidecars">—</b></div>
+<div class="org-rule"><span>未知占位名</span><b id="org-rule-unknown">—</b></div>
+</div>
+<p class="helper">目录、重命名规则（文件 / 目录模板）、二级分类策略与洗版策略都在「设置 → 自动整理」里修改，保存后立即生效（只影响之后的扫描）。默认值开箱可用：命名默认「{title}」+ 目录「{artist}/{album}」，二级分类默认关闭，洗版默认「并存」（不比较音质、不做替换）。重复判定：与「已整理」逐字节相同（SHA-256）；无法识别的音频与其它非音频文件一律进冗余数据。</p></section>
+<section class="surface list-panel org-card"><div class="panel-title"><div><h3>整理计划</h3><span class="small-label" id="org-plan-summary">—</span></div><button class="btn outline" onclick="orgLoadPlans()">刷新计划</button></div>
+<div id="org-plans"><div class="detail-empty">还没有整理计划：点右上角「扫描待整理」生成预览。</div></div></section>
+</div>
+<section class="surface org-card hidden" id="org-plan-card"><div class="org-plan-head"><div><span class="eyebrow">PLAN · <span id="org-plan-id">—</span></span><h3 id="org-plan-title">—</h3><div class="org-count-pills" id="org-plan-pills"></div></div><div class="org-actions" id="org-plan-actions"></div></div>
+<div class="org-progress-wrap hidden" id="org-plan-progress"><div class="progress"><i id="org-plan-bar" style="width:0%"></i></div><div class="org-progress-label" id="org-plan-progress-label"></div></div>
+<div class="notice" id="org-plan-note">核对清单后再执行；执行前会逐个复核文件未发生变化，失败项会留在「待整理」。</div>
+<div class="org-tabs" id="org-tabs"></div>
+<div id="org-items"><div class="detail-empty">—</div></div></section></div><div class="page hidden" id="view-settings"><div class="page-heading"><div><span class="eyebrow">PREFERENCES &amp; PLUGINS</span><h2>设置与插件库</h2><p>工作台偏好保存在此浏览器；插件库中的标签源、声纹与歌词服务可单独启停，停用的插件不参与融合搜索。</p></div><button class="btn outline" onclick="showSettingsTab('plugins')">刷新插件</button></div><div class="settings-shell"><nav class="settings-tabs" id="settings-tabs"><button class="settings-tab active" data-tab="prefs" onclick="showSettingsTab('prefs')"><b>工作台偏好</b><span>保存在本浏览器</span></button><button class="settings-tab" data-tab="plugins" onclick="showSettingsTab('plugins')"><b>插件库</b><span>数据源启停与统计</span></button><button class="settings-tab" data-tab="net" onclick="showSettingsTab('net')"><b>网络代理</b><span>服务端出网设置</span></button><button class="settings-tab" data-tab="organize" onclick="showSettingsTab('organize')"><b>自动整理</b><span>本地曲库整理规则</span></button></nav><div class="settings-pane"><section class="surface settings-card" id="pane-prefs"><div class="panel-title"><h3>工作台偏好</h3><span class="small-label">保存在本浏览器</span></div><label class="field"><span>默认匹配来源</span><select id="set-source"></select></label><label class="checkline"><input id="set-only-empty" type="checkbox"> 默认只补空白</label><label class="checkline"><input id="set-include-lyrics" type="checkbox"> 默认尝试获取歌词</label><label class="checkline"><input id="set-include-cover" type="checkbox"> 默认预览封面</label><label class="field"><span>文件重命名模板</span><input id="set-template" placeholder="{artist} - {title}"></label><p class="helper">支持 {artist}、{title}、{album}、{track}、{date}、{year}。设置保存在此浏览器，任务和修改记录持久化在 NAS。</p><div class="dialog-actions"><button class="btn outline" onclick="resetSettings()">恢复默认</button><button class="btn primary" onclick="saveSettings()">保存设置</button></div></section><section class="surface list-panel hidden" id="pane-plugins"><div class="panel-title"><div><h3>插件库</h3><span class="small-label" id="plugin-summary">读取中…</span></div><div class="plugin-actions"><label class="checkline"><input id="show-removed" type="checkbox" onchange="loadPlugins(true)"> 显示已删除</label><button class="btn primary" onclick="openPluginEditor()">＋ 添加插件</button></div></div><p class="subtle">插件（数据源）可单独启停：停用后不再参与融合搜索，单源检索也会被拒绝；状态写入 NAS 数据目录，重启后保留。</p><div id="plugin-table"><div class="detail-empty">正在读取插件…</div></div></section><section class="surface settings-card hidden" id="pane-net"><div class="panel-title"><h3>网络代理</h3><span class="small-label">服务端生效 · 全部出网请求（搜索源 / 封面 / 歌词 / 声纹 / 插件自定义源）</span></div><div class="field-grid"><label class="field"><span>http 代理</span><input id="set-proxy-url" placeholder="http://10.0.0.77:7890"></label><label class="field"><span>状态</span><span class="small-label proxy-result" id="proxy-result">读取中…</span></label></div><label class="checkline"><input id="set-proxy-on" type="checkbox"> 启用代理（保存后立即生效，容器重启后保留）</label><p class="helper">直连可用时无需启用；遇到目标站点超时或想加速时再打开。启用前建议先点「测试连接」。</p><div class="dialog-actions"><button class="btn outline" onclick="testProxy()">测试连接</button><button class="btn primary" onclick="saveProxy()">保存代理</button></div></section><section class="surface settings-card hidden" id="pane-organize"><div class="panel-title"><div><h3>自动整理</h3><span class="small-label" id="org-set-state">读取中…</span></div><button class="btn outline" onclick="orgLoad(true)">重新读取</button></div>
+<div class="org-subtabs" id="org-subtabs"><button class="org-subtab active" data-sub="basic" onclick="orgSubTab('basic')">基础配置</button><button class="org-subtab" data-sub="naming" onclick="orgSubTab('naming')">重命名规则</button><button class="org-subtab" data-sub="classify" onclick="orgSubTab('classify')">二级分类策略</button><button class="org-subtab" data-sub="wash" onclick="orgSubTab('wash')">洗版策略</button><button class="org-subtab" data-sub="help" onclick="orgSubTab('help')">变量与语法</button></div>
+
+<div class="org-sub" id="org-sub-basic">
+<div class="notice org-notice">下面四个目录是<b>只读的固定值</b>，只能点「点击选择」改动（和 CMS 一样，避免手打出错）。框里是<b>容器内路径</b>，下面小字是这台 NAS 上的<b>真实路径</b>。待整理必须在「已整理」库之外，四个目录不能相同或互相包含；一次不要放太多文件——先「扫描待整理」生成清单，核对后再执行。</div>
+<div class="org-dir-list">
+<label class="org-dir"><span class="org-dir-label">待整理文件夹（源）<i class="org-hint" title="新下载的音乐先放这里；扫描从这个目录开始，整理完成后里面的文件会被移走。">?</i></span><span class="filename-row"><input id="org-in-source" class="org-ro" readonly placeholder="/app/media/music/未整理/待整理" title="点右侧「点击选择」修改"/><button class="btn outline" type="button" onclick="orgPick('source')">点击选择</button><span class="org-path-state" id="org-state-source">—</span></span><span class="org-abs" id="org-abs-source">服务器实际路径：—</span></label>
+<label class="org-dir"><span class="org-dir-label">已存在（重复）文件夹<i class="org-hint" title="与「已整理」内容完全相同（SHA-256 逐字节相同）的歌曲，以及洗版时被替换下来的旧版本，都会移到这里。">?</i></span><span class="filename-row"><input id="org-in-duplicates" class="org-ro" readonly placeholder="/app/media/music/未整理/已存在" title="点右侧「点击选择」修改"/><button class="btn outline" type="button" onclick="orgPick('duplicates')">点击选择</button><span class="org-path-state" id="org-state-duplicates">—</span></span><span class="org-abs" id="org-abs-duplicates">服务器实际路径：—</span></label>
+<label class="org-dir"><span class="org-dir-label">冗余数据文件夹<i class="org-hint" title="无法识别的音频与其它非音频文件（.txt、.DS_Store、无主歌词与图片等）移到这里。">?</i></span><span class="filename-row"><input id="org-in-junk" class="org-ro" readonly placeholder="/app/media/music/未整理/冗余数据" title="点右侧「点击选择」修改"/><button class="btn outline" type="button" onclick="orgPick('junk')">点击选择</button><span class="org-path-state" id="org-state-junk">—</span></span><span class="org-abs" id="org-abs-junk">服务器实际路径：—</span></label>
+<label class="org-dir"><span class="org-dir-label">已整理归档目录<i class="org-hint" title="整理成功的歌曲归档到这里；重复判定与洗版比较都以这个目录为基准。">?</i></span><span class="filename-row"><input id="org-in-library" class="org-ro" readonly placeholder="/app/media/music/已整理" title="点右侧「点击选择」修改"/><button class="btn outline" type="button" onclick="orgPick('library')">点击选择</button><span class="org-path-state" id="org-state-library">—</span></span><span class="org-abs" id="org-abs-library">服务器实际路径：—</span></label>
+</div>
+<label class="checkline"><input type="checkbox" id="org-in-sidecars" checked> 同名 .lrc 歌词与图片跟随歌曲移动并同步改名（关闭后它们进冗余数据）</label>
+<label class="checkline"><input type="checkbox" id="org-in-track" onchange="orgTrackShortcut()"> 归档文件名带音轨号前缀（会把命名模板设为「音轨号 + 歌名」，可在「重命名规则」里细调）</label>
+<div class="field-grid">
+<label class="field"><span>音轨号格式<i class="org-hint" title="勾选「带音轨号前缀」时生效。">?</i></span><select id="org-in-sep" onchange="orgTrackShortcut()"><option value=". ">07. 歌名</option><option value=" - ">07 - 歌名</option><option value=" ">07 歌名</option></select></label>
+<label class="field"><span>未知歌手占位名<i class="org-hint" title="标签和文件名都读不出歌手时，用这个名字建歌手目录。">?</i></span><input id="org-in-unknown-artist" placeholder="未知歌手"/></label>
+<label class="field"><span>未知专辑占位名<i class="org-hint" title="标签和文件名都读不出专辑时，用这个名字建专辑目录。">?</i></span><input id="org-in-unknown-album" placeholder="未知专辑"/></label>
+</div>
+<label class="field"><span>服务器实际路径（容器 /app/media 对应的 NAS 目录）<i class="org-hint" title="只用于页面显示：把容器内路径翻译成你在 NAS 上看到的真实路径，方便核对。如果你的映射不一样（例如自己映射了别的文件夹），改这里即可；留空就只显示容器内路径。">?</i></span><input id="org-in-host-root" placeholder="/vol1/1000/1" oninput="orgSyncPaths()"/></label>
+<p class="helper" id="org-host-note">默认 <code>/vol1/1000/1</code>（即容器内 <code>/app/media</code> 在 NAS 上的位置）。整理默认在挂载根下新建 <code>music/</code>，四个目录都放在它里面；不喜欢就自己映射别的文件夹，或分别「点击选择」指定。</p>
+</div>
+
+<div class="org-sub hidden" id="org-sub-naming">
+<div class="notice">默认（开箱可用）：文件名 <b>{title}</b>，目录 <b>{artist}/{album}</b>。想让文件名带音轨号，用 <code>&lt;{track:02d}. &gt;{title}</code> 这种可选块写法——没有音轨号时整块会去掉，不会留下多余的「. 」。</div>
+<label class="field"><span>文件命名模板<i class="org-hint" title="只影响文件名（扩展名保留原样）。例如 {track:02d}. {title} 或 <{artist} - >{title}。">?</i></span><input id="org-in-name-template" placeholder="{title}（留空即默认）"/></label>
+<label class="field"><span>目录模板<i class="org-hint" title="相对「已整理」库的目录层，用 / 分层。例如 {artist}/{album} 或 {genre}/{artist}/{album}。">?</i></span><input id="org-in-dir-template" placeholder="{artist}/{album}"/></label>
+<div class="btn-row"><button class="btn outline" type="button" onclick="orgPreviewTemplate()">预览示例路径</button><button class="btn outline" type="button" onclick="orgFillTemplate('<{track:02d}. >{title}')">示例：带音轨号</button><button class="btn outline" type="button" onclick="orgFillTemplate('<{artist} - >{title}')">示例：歌手 - 歌名</button></div>
+<div class="org-preview" id="org-preview"><div class="detail-empty">点「预览示例路径」看看效果（不会扫描、不会改动文件）。</div></div>
+</div>
+
+<div class="org-sub hidden" id="org-sub-classify">
+<div class="notice">二级分类策略用 YAML 写：从上往下匹配，命中即用；没命中就用上面的目录模板。留空 = 关闭。条件支持 <b>genre</b>（包含即命中）、<b>year_min</b>、<b>year_max</b>、<b>decade</b>。</div>
+<textarea id="org-in-classify" rows="12" spellcheck="false" placeholder="# 例：按流派和年代分层（留空则关闭）&#10;- name: 爵士&#10;  match:&#10;    genre: [jazz, 爵士]&#10;  path: &quot;爵士/{artist}/{album}&quot;&#10;- name: 九十年代&#10;  match:&#10;    year_min: 1990&#10;    year_max: 1999&#10;  path: &quot;{decade}/{artist}/{album}&quot;"></textarea>
+<div class="btn-row"><button class="btn outline" type="button" onclick="orgFillClassify()">填入示例：流派</button><button class="btn outline" type="button" onclick="orgFillClassifyDecade()">填入示例：年代</button><button class="btn outline" type="button" onclick="orgFillClassifyLetter()">填入示例：首字母</button><button class="btn outline" type="button" onclick="orgClearClassify()">清空（关闭二级分类）</button><button class="btn outline" type="button" onclick="orgPreviewTemplate()">预览示例路径</button></div>
+<div class="org-preview" id="org-classify-preview"><div class="detail-empty">保存前可以先用「预览示例路径」检查规则命中情况。</div></div>
+</div>
+
+<div class="org-sub hidden" id="org-sub-wash">
+<div class="notice org-notice">洗版只处理「同一首歌」：同歌手 + 同歌名（不区分大小写）。它不会删除任何文件——被替换下来的旧版本一律移入「已存在」目录，由你人工确认。</div>
+<div class="field-grid">
+<label class="field"><span>洗版模式<i class="org-hint" title="coexist：两份都留（新文件按重名加 (2) 后缀）。prefer_better：新文件音质更好才替换。always_replace：有同歌就替换。skip：从不替换，新文件直接进「已存在」。">?</i></span><select id="org-in-wash-mode"><option value="coexist">并存（默认，不比较音质）</option><option value="prefer_better">音质更优时替换</option><option value="always_replace">总是替换</option><option value="skip">从不替换（新文件进「已存在」）</option></select></label>
+<label class="field"><span>体积上限（MB，0 = 不限制）<i class="org-hint" title="新文件超过这个体积就不自动替换，避免误用大文件覆盖。">?</i></span><input id="org-in-wash-max" type="number" min="0" step="1" placeholder="0"/></label>
+</div>
+<p class="helper">音质比较顺序：码率（kbps）→ 采样率 → 位深 → 体积。替换执行时先把旧版本移到「已存在」，再把新文件放进归档位置；两步都写进任务日志，可在「修改记录 / 实时日志」里核对。</p>
+</div>
+
+<div class="org-sub hidden" id="org-sub-help">
+<h4>可用变量</h4>
+<div class="org-help-grid"><b>{title}</b><span>歌名（标签优先，其次按文件名解析）</span><b>{artist}</b><span>歌手，多歌手原样保留</span><b>{album}</b><span>专辑</span><b>{albumartist}</b><span>专辑艺术家（缺省等于歌手）</span><b>{track}</b><span>音轨号；<code>{track:02d}</code> 补零成 07</span><b>{year}</b><span>年份（取标签日期的前四位）</span><b>{decade}</b><span>年代，如 1990s</span><b>{genre}</b><span>流派</span><b>{artist_initial}</b><span>歌手首字母 / 首字（做 A–Z 分层用）</span></div>
+<h4>语法</h4>
+<div class="org-help-grid"><b>{变量}</b><span>直接替换；没读到的变量在文件名里会变成占位名（未知歌手 / 未知专辑）</span><b>{变量:02d}</b><span>补零到指定宽度（音轨号常用）</span><b>&lt;...&gt;</b><span>可选块：块里只要有一个变量是空，整块丢弃。例：<code>&lt;{artist} - &gt;{title}</code></span><b>/</b><span>目录模板用 / 分层；空段自动丢弃</span><b>非法字符</b><span>\ / : * ? " &lt; &gt; | 自动换成全角，避免 NAS / SMB 出错</span></div>
+<h4>二级分类策略（YAML）</h4>
+<pre class="org-help-code">- name: 华语
+  match:
+    genre: [mandopop, 华语]      # 流派包含其一即命中
+  path: "华语/{artist}/{album}"   # 命中后用的目录模板
+- name: 新歌
+  match:
+    year_min: 2020
+  path: "新歌/{year}/{artist}"</pre>
+<p class="helper">写错的 YAML 保存时会被直接拒绝并给出原因，不会写进配置；规则里的 <code>path</code> 必填。</p>
+</div>
+
+<div class="dialog-actions"><button class="btn outline" onclick="orgResetSettings()">恢复默认</button><button class="btn primary" onclick="orgSaveSettings()">保存配置</button></div>
+</section></div></div></div>
 <div class="modal" id="plugin-modal" role="dialog" aria-modal="true" aria-labelledby="plugin-modal-title" onclick="if(event.target===this)closePluginEditor()"><div class="modal-card plugin-card"><div class="modal-title" id="plugin-modal-title">编辑插件</div><div class="field-grid"><label class="field"><span>显示名</span><input id="pf-name" placeholder="例如：我的音乐接口"></label><label class="field"><span>排序（越小越靠前）</span><input id="pf-order" type="number" min="0" max="999"></label></div><label class="field"><span>描述</span><input id="pf-desc" placeholder="一句话说明这个数据源"></label><div id="pf-params"></div><div id="pf-custom" class="hidden"><label class="field"><span>搜索 URL 模板（必须含 {q}，可用 {limit}）</span><input id="pf-url" placeholder="https://api.example.com/search?q={q}&amp;limit={limit}"></label><div class="field-grid"><label class="field"><span>请求方法</span><select id="pf-method"><option>GET</option><option>POST</option></select></label><label class="field"><span>超时（秒）</span><input id="pf-timeout" type="number" min="3" max="60" step="1"></label></div><label class="field"><span>请求头（JSON 对象，可留空）</span><textarea id="pf-headers" rows="2" placeholder='{"Authorization": "Bearer xxx"}'></textarea></label><div class="field-grid"><label class="field"><span>结果路径（指向数组，如 data.list）</span><input id="pf-path" placeholder="data.list"></label><label class="field"><span>融合搜索条数</span><input id="pf-limit" type="number" min="1" max="50"></label></div><div class="section-title">字段映射：响应字段 → 标签字段（支持 a.b[0].c 写法）</div><div class="field-grid"><label class="field"><span>标题 title *</span><input id="pf-f-title" placeholder="songname"></label><label class="field"><span>艺术家 artist</span><input id="pf-f-artist" placeholder="singer[0].name"></label><label class="field"><span>专辑 album</span><input id="pf-f-album" placeholder="albumname"></label><label class="field"><span>发行日期 date</span><input id="pf-f-date" placeholder="publish_date"></label><label class="field"><span>音轨号 track</span><input id="pf-f-track" placeholder="track_no"></label><label class="field"><span>流派 genre</span><input id="pf-f-genre" placeholder="genre"></label><label class="field"><span>封面 cover</span><input id="pf-f-cover" placeholder="pic"></label><label class="field"><span>唯一 id</span><input id="pf-f-id" placeholder="song_id"></label></div><div class="test-row"><input id="pf-test-q" placeholder="测试检索词" value="Shape of My Heart"><button class="btn outline" type="button" onclick="testPluginConfig()">测试连接</button></div><div id="pf-test-result" class="notice hidden"></div></div><div class="dialog-actions"><button class="btn outline" onclick="closePluginEditor()">取消</button><button class="btn primary" onclick="savePluginConfig()">保存</button></div></div></div>
-<div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title"><div class="dialog"><span class="eyebrow">FINAL REVIEW</span><h3 id="confirm-title">确认修改？</h3><p id="confirm-description">请检查修改前后的差异；确认后才会提交。</p><div class="dialog-list" id="confirm-list"></div><p id="confirm-warning" style="color:#ad782b">提交前检查当前文件版本，提交后保留元数据快照。</p><div class="dialog-actions"><button class="btn outline" id="confirm-cancel">再检查一下</button><button class="btn primary" id="confirm-apply">确认提交</button></div></div></div><div id="toast" class="toast" role="status" aria-live="polite"></div><noscript><div class="noscript">此应用需要 JavaScript。</div></noscript>
+<div class="modal" id="org-picker"><div class="dialog org-picker-dialog">
+<h3 id="org-pick-title">选择目录</h3>
+<p id="org-pick-desc">只会列出音乐库内的目录，不会移动任何文件。</p>
+<div class="org-pick-crumbs" id="org-pick-crumbs"></div>
+<div class="org-pick-role" id="org-pick-role"></div>
+<div class="org-pick-list" id="org-pick-list"><div class="detail-empty">读取中…</div></div>
+<div class="org-pick-new"><input id="org-pick-new-name" placeholder="要新建的文件夹名，如：待整理"/><button class="btn outline" onclick="orgCreateFolder()">新建文件夹</button></div>
+<div class="org-pick-current">当前选择：<b id="org-pick-current">—</b><span class="small-label" id="org-pick-count"></span></div>
+<div class="dialog-actions"><button class="btn outline" id="org-pick-cancel">取消</button><button class="btn outline" onclick="orgPickUseRoot()">用音乐库根目录</button><button class="btn primary" id="org-pick-use">用这个目录</button></div>
+</div></div><div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title"><div class="dialog"><span class="eyebrow">FINAL REVIEW</span><h3 id="confirm-title">确认修改？</h3><p id="confirm-description">请检查修改前后的差异；确认后才会提交。</p><div class="dialog-list" id="confirm-list"></div><p id="confirm-warning" style="color:#ad782b">提交前检查当前文件版本，提交后保留元数据快照。</p><div class="dialog-actions"><button class="btn outline" id="confirm-cancel">再检查一下</button><button class="btn primary" id="confirm-apply">确认提交</button></div></div></div><div id="toast" class="toast" role="status" aria-live="polite"></div><noscript><div class="noscript">此应用需要 JavaScript。</div></noscript>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -367,7 +543,7 @@ let confirmAction=null;
 const stamp=t=>t?new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Tokyo',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(t*1000)):'—';
 const shortText=x=>{let s=String(x??'');return s.length>100?s.slice(0,100)+'…':s};
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-function showView(name){currentView=name;for(let id of ['work','tasks','history','logs','settings'])$('view-'+id).classList.toggle('hidden',id!==name);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='tasks')refreshTasks();if(name==='history')refreshHistory();if(name==='settings'){syncSettingsForm();showSettingsTab(settingsLastTab||'prefs')}if(name==='logs')ensureLogStream();window.scrollTo({top:0,behavior:'smooth'})}
+function showView(name){currentView=name;for(let id of ['work','tasks','history','logs','organize','settings'])$('view-'+id).classList.toggle('hidden',id!==name);document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='organize')openOrganize();if(name==='tasks')refreshTasks();if(name==='history')refreshHistory();if(name==='settings'){syncSettingsForm();showSettingsTab(settingsLastTab||'prefs')}if(name==='logs')ensureLogStream();window.scrollTo({top:0,behavior:'smooth'})}
 function refreshMode(){let only=$('only-empty').checked;$('mode-badge').textContent=only?'仅补空白':'允许覆盖';$('mode-badge').className='pill '+(only?'purple':'amber');let notice=$('safety-notice');notice.textContent=only?'当前仅补空白，不覆盖已有标签和封面。所有整理操作先预览，确认后才写入。':'当前允许覆盖已有标签和封面！请逐项核对预览；确认后写入，并创建元数据历史。';notice.classList.toggle('warning',!only)}
 function renderCrumbs(){let node=$('crumb');node.innerHTML='';let root=document.createElement('button');root.textContent='⌂ 根目录';root.onclick=()=>load('');node.append(root);let path='';for(let part of state.cwd.split('/').filter(Boolean)){let sep=document.createElement('span');sep.textContent='›';sep.style.color='#8c96a8';node.append(sep);path=path?path+'/'+part:part;let target=path,b=document.createElement('button');b.textContent=part;b.onclick=()=>load(target);node.append(b)}}
 function sortedFiles(){let files=[...state.files];let sort=$('sort-by').value;files.sort((a,b)=>sort==='size'?b.size-a.size:sort==='mtime'?(b.mtime||0)-(a.mtime||0):sort==='name-desc'?b.name.localeCompare(a.name,'zh-CN',{numeric:true}):a.name.localeCompare(b.name,'zh-CN',{numeric:true}));return files}
@@ -403,8 +579,8 @@ function importPreview(job){
 }
 async function monitorJob(id,kind,chosen=[]){activeJob=id;state.busy=true;$('queue-area').classList.remove('hidden');$('progress').classList.remove('hidden');$('cancel-scan').classList.remove('hidden');$('review-btn').disabled=true;refreshTasks();try{while(activeJob===id){let job=await api('/api/tasks/'+id);let counts=job.counts||{},done=(counts.completed||0)+(counts.failed||0),percent=job.total?Math.round(done/job.total*100):0;$('progress-bar').style.width=percent+'%';$('progress-label').textContent=(kind==='preview'?'后台匹配':'后台写入')+' · 已处理 '+done+'/'+job.total+' · '+(STATUS[job.status]||job.status);if(kind==='preview')importPreview(job);if(TERMINAL.has(job.status)){if(kind==='apply'){for(let item of job.items||[]){let q=state.queue.get(item.path);if(!q)continue;q.selected=false;if(item.status==='completed'){q.done=true;q.error=null}else{q.error=item.error||'未执行，请重新读取后生成预览';q.partial=!!item.result?.partial}}updateQueue();syncLibraryMatchStatus();if(state.active&&chosen.some(x=>x.path===state.active))await openTrack(state.active,true)}toast(job.status==='completed'?(kind==='preview'?'预览已完成，请核对候选':'写入完成，历史已保存'):'任务'+(STATUS[job.status]||job.status)+'，请查看明细',job.status==='failed'||job.status==='partial');break}await pause(850)}}catch(e){toast('连接中断；后台任务仍可在任务中心查询：'+e.message,true)}finally{if(activeJob===id)activeJob=null;state.busy=false;$('cancel-scan').classList.add('hidden');updateQueue();refreshTasks();refreshSystem()}}
 async function refreshSystem(){try{let d=await api('/api/system');$('db-label').textContent=d.storage.database+' · '+d.storage.journal_mode.toUpperCase();$('stat-jobs').textContent=d.storage.jobs;$('stat-active').textContent=d.storage.active_jobs;$('active-job-count').textContent=d.storage.active_jobs?'('+d.storage.active_jobs+')':''}catch{}}
-async function refreshTasks(){refreshSystem();try{let d=await api('/api/tasks');if(!d.jobs.length){$('jobs-table').innerHTML='<div class="detail-empty">还没有后台任务。到工作台生成一次匹配预览即可开始。</div>';return}$('jobs-table').innerHTML='<div class="table-wrap"><table class="data-table"><thead><tr><th>任务</th><th>创建时间 · JST</th><th>状态</th><th>已处理</th><th>操作</th></tr></thead><tbody>'+d.jobs.map(j=>{let c=j.counts||{},done=(c.completed||0)+(c.failed||0);return'<tr><td><b>'+(j.kind==='preview'?'匹配预览':'确认写入')+'</b><div class="small-label">'+j.total+' 首曲目</div></td><td>'+stamp(j.created)+'</td><td><span class="pill '+(j.status==='completed'?'green':j.status==='failed'||j.status==='partial'?'red':'purple')+'">'+(STATUS[j.status]||j.status)+'</span></td><td>'+done+' / '+j.total+'</td><td><button class="btn outline" data-job="'+esc(j.id)+'">查看</button></td></tr>'}).join('')+'</tbody></table></div>';$('jobs-table').querySelectorAll('[data-job]').forEach(b=>b.onclick=()=>showJob(b.dataset.job));if(selectedJob&&currentView==='tasks')showJob(selectedJob)}catch(e){$('jobs-table').innerHTML='<div class="detail-empty">'+esc(e.message)+'</div>'}}
-async function showJob(id){selectedJob=id;try{let j=await api('/api/tasks/'+id);lastJobDetail=j;let html='<div class="head-line"><b>'+(j.kind==='preview'?'匹配预览':'确认写入')+'</b><span class="pill">'+(STATUS[j.status]||j.status)+'</span></div><p class="drawer-note">'+stamp(j.created)+' · '+j.total+' 首</p><div class="btn-row">';if(j.kind==='preview'&&TERMINAL.has(j.status))html+='<button id="load-job-preview">读取整理预览</button>';if(!TERMINAL.has(j.status))html+='<button id="stop-job">安全停止</button>';if(TERMINAL.has(j.status))html+='<button id="redo-preview">重新生成预览</button>';html+='</div><div class="job-items">'+j.items.map(i=>'<div style="margin:9px 0"><b>'+esc(i.path.split('/').at(-1))+'</b><br>'+(STATUS[i.status]||i.status)+(i.error?' · <span style="color:#b84a57">'+esc(i.error)+'</span>':i.result&&!i.result.candidate&&j.kind==='preview'?' · 无候选':'')+'</div>').join('')+'</div><p class="section-title">操作日志</p><div class="job-log">'+j.logs.map(l=>'<div class="log-'+esc(l.level)+'">'+stamp(l.at)+' '+esc(l.message)+'</div>').join('')+'</div>';$('job-detail').innerHTML=html;if($('load-job-preview'))$('load-job-preview').onclick=()=>{if(state.busy)return toast('先等待当前任务完成',true);importPreview(j);showView('work');$('queue-area').scrollIntoView({behavior:'smooth',block:'start'});toast('已读取持久化预览，尚未写入')};if($('stop-job'))$('stop-job').onclick=()=>cancelJob(id);if($('redo-preview'))$('redo-preview').onclick=()=>{showView('work');preview(j.items.map(x=>x.path))}}catch(e){$('job-detail').textContent=e.message}}
+async function refreshTasks(){refreshSystem();try{let d=await api('/api/tasks');if(!d.jobs.length){$('jobs-table').innerHTML='<div class="detail-empty">还没有后台任务。到工作台生成一次匹配预览即可开始。</div>';return}$('jobs-table').innerHTML='<div class="table-wrap"><table class="data-table"><thead><tr><th>任务</th><th>创建时间 · JST</th><th>状态</th><th>已处理</th><th>操作</th></tr></thead><tbody>'+d.jobs.map(j=>{let c=j.counts||{},done=(c.completed||0)+(c.failed||0);return'<tr><td><b>'+{preview:'匹配预览',apply:'确认写入',organize_scan:'整理扫描',organize_apply:'整理执行'}[j.kind]||j.kind+'</b><div class="small-label">'+j.total+' '+(j.kind&&j.kind.indexOf('organize')===0?'个文件':'首曲目')+'</div></td><td>'+stamp(j.created)+'</td><td><span class="pill '+(j.status==='completed'?'green':j.status==='failed'||j.status==='partial'?'red':'purple')+'">'+(STATUS[j.status]||j.status)+'</span></td><td>'+done+' / '+j.total+'</td><td><button class="btn outline" data-job="'+esc(j.id)+'">查看</button></td></tr>'}).join('')+'</tbody></table></div>';$('jobs-table').querySelectorAll('[data-job]').forEach(b=>b.onclick=()=>showJob(b.dataset.job));if(selectedJob&&currentView==='tasks')showJob(selectedJob)}catch(e){$('jobs-table').innerHTML='<div class="detail-empty">'+esc(e.message)+'</div>'}}
+async function showJob(id){selectedJob=id;try{let j=await api('/api/tasks/'+id);lastJobDetail=j;let html='<div class="head-line"><b>'+{preview:'匹配预览',apply:'确认写入',organize_scan:'整理扫描',organize_apply:'整理执行'}[j.kind]||j.kind+'</b><span class="pill">'+(STATUS[j.status]||j.status)+'</span></div><p class="drawer-note">'+stamp(j.created)+' · '+j.total+(j.kind&&j.kind.indexOf('organize')===0?' 个文件':' 首')+'</p><div class="btn-row">';if(j.kind==='preview'&&TERMINAL.has(j.status))html+='<button id="load-job-preview">读取整理预览</button>';if(!TERMINAL.has(j.status))html+='<button id="stop-job">安全停止</button>';if(TERMINAL.has(j.status))html+='<button id="redo-preview">重新生成预览</button>';html+='</div><div class="job-items">'+j.items.map(i=>'<div style="margin:9px 0"><b>'+esc(i.path.split('/').at(-1))+'</b><br>'+(STATUS[i.status]||i.status)+(i.error?' · <span style="color:#b84a57">'+esc(i.error)+'</span>':i.result&&!i.result.candidate&&j.kind==='preview'?' · 无候选':'')+'</div>').join('')+'</div><p class="section-title">操作日志</p><div class="job-log">'+j.logs.map(l=>'<div class="log-'+esc(l.level)+'">'+stamp(l.at)+' '+esc(l.message)+'</div>').join('')+'</div>';$('job-detail').innerHTML=html;if($('load-job-preview'))$('load-job-preview').onclick=()=>{if(state.busy)return toast('先等待当前任务完成',true);importPreview(j);showView('work');$('queue-area').scrollIntoView({behavior:'smooth',block:'start'});toast('已读取持久化预览，尚未写入')};if($('stop-job'))$('stop-job').onclick=()=>cancelJob(id);if($('redo-preview'))$('redo-preview').onclick=()=>{showView('work');preview(j.items.map(x=>x.path))}}catch(e){$('job-detail').textContent=e.message}}
 async function cancelJob(id){try{await api('/api/tasks/'+id+'/cancel',{method:'POST'});toast('已请求安全停止；当前操作结束后停止剩余项');refreshTasks()}catch(e){toast(e.message,true)}}
 async function refreshHistory(){try{let d=await api('/api/history'+(historyFilter?'?path='+encodeURIComponent(historyFilter):''));if(!d.versions.length){$('history-table').innerHTML='<div class="detail-empty">'+(historyFilter?'该曲目':'目前')+'还没有修改记录。只有实际提交才会创建历史，预览不会伪造记录。</div>';return}$('history-table').innerHTML='<div class="table-wrap"><table class="data-table"><thead><tr><th>文件</th><th>提交时间 · JST</th><th>类型</th><th>状态</th><th>操作</th></tr></thead><tbody>'+d.versions.map(v=>'<tr><td class="path-cell" title="'+esc(v.after_path)+'"><b>'+esc(v.after_path.split('/').at(-1))+'</b></td><td>'+stamp(v.created)+'</td><td>'+({manual:'手动修改',batch:'批量整理',cover:'封面',lrc:'外置歌词',restore:'历史回退',tags:'标签'}[v.kind]||v.kind)+'</td><td><span class="pill '+(v.status==='completed'?'green':v.status==='partial'?'amber':'')+'">'+({completed:'已提交',prepared:'核验中',failed:'未提交 / 已恢复',partial:'需核查'}[v.status]||v.status)+'</span></td><td><button class="btn outline" data-history="'+esc(v.id)+'">查看差异</button>'+(['completed','partial'].includes(v.status)?'<button class="btn soft" data-restore="'+esc(v.id)+'">回退</button>':'')+'</td></tr>').join('')+'</tbody></table></div>';let byId=new Map(d.versions.map(v=>[v.id,v]));$('history-table').querySelectorAll('[data-history]').forEach(b=>b.onclick=()=>{let v=byId.get(b.dataset.history);let changes=FIELDS.filter(k=>String(v.before_tags[k]??'')!==String(v.after_tags[k]??'')).map(k=>({key:k,before:v.before_tags[k]??'',after:v.after_tags[k]??''}));openConfirm('修改记录详情','这里只查看差异，不会执行写入。',diffHtml(changes)+(v.before_path!==v.after_path?'<div><b>路径</b>：'+esc(v.before_path)+' → '+esc(v.after_path)+'</div>':'')+'<div><b>封面状态</b>：'+(v.before_tags.has_cover?'有':'无')+' → '+(v.after_tags.has_cover?'有':'无')+'</div>'+(v.error?'<div>'+esc(v.error)+'</div>':''),async()=>{},'关闭')});$('history-table').querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>prepareRestore(b.dataset.restore))}catch(e){$('history-table').innerHTML='<div class="detail-empty">读取失败：'+esc(e.message)+'</div>'}}
 async function prepareRestore(id){try{let p=await api('/api/history/'+id+'/preview');openConfirm('确认回退到这次修改之前？','会恢复该记录的元数据、封面及外置歌词。音频本体不变；回退本身会创建新的历史记录。',diffHtml(p.changes)+'<div><b>文件</b>：'+esc(p.path)+' → '+esc(p.target_path)+'</div><div>包含封面与外置歌词恢复；请确认目标记录。</div>',async()=>{await api('/api/history/'+id+'/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({expected_version:p.file_version,confirmed:true})});toast('回退完成，已记录新的版本');await load(state.cwd);state.track=null;state.active=null;$('editor-loaded').classList.add('hidden');$('editor-empty').classList.remove('hidden');refreshHistory();refreshSystem()},'确认回退')}catch(e){toast('无法准备回退：'+e.message,true)}}
@@ -550,5 +726,355 @@ window.addEventListener('DOMContentLoaded',()=>{try{loadServerSettings()}catch(e
 
 /* ===== V4.1.1 设置页选项卡 ===== */
 let settingsLastTab='prefs';
-function showSettingsTab(tab){settingsLastTab=tab;document.querySelectorAll('.settings-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));['prefs','plugins','net'].forEach(t=>{let el=$('pane-'+t);if(el)el.classList.toggle('hidden',t!==tab)});if(tab==='plugins'){pluginBusy=false;loadPlugins()}if(tab==='net'){loadServerSettings()}}
+function showSettingsTab(tab){settingsLastTab=tab;document.querySelectorAll('.settings-tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));['prefs','plugins','net','organize'].forEach(t=>{let el=$('pane-'+t);if(el)el.classList.toggle('hidden',t!==tab)});if(tab==='plugins'){pluginBusy=false;loadPlugins()}if(tab==='net'){loadServerSettings()}if(tab==='organize')orgLoad(true)}
+
+/* ===== V4.2 本地自动整理（只移动、不删除、不覆盖） ===== */
+const ORG_TASK_LABEL={preview:'匹配预览',apply:'确认写入',organize_scan:'整理扫描',organize_apply:'整理执行'};
+const ORG_KIND_LABEL={move:'待移动',wash:'洗版替换',duplicate:'重复',junk:'冗余/失败',sidecar:'附属文件'};
+const ORG_KIND_PILL={move:'purple',wash:'red',duplicate:'amber',junk:'gray',sidecar:'green'};
+const ORG_PLAN_STATUS={scanning:'扫描中',ready:'待执行',applying:'执行中',done:'已完成',cancelled:'已停止',failed:'失败'};
+const ORG_TABS=[['move','待移动'],['wash','洗版替换'],['duplicate','重复'],['junk','冗余/失败'],['sidecar','附属文件']];
+const ORG_PICK_LABEL={source:'待整理文件夹（源）',duplicates:'已存在（重复）文件夹',junk:'冗余数据文件夹',library:'已整理归档目录'};
+const ORG_WASH_LABEL={coexist:'并存（默认）',prefer_better:'音质更优时替换',always_replace:'总是替换',skip:'从不替换'};
+const ORG_DEFAULTS={source:'music/未整理/待整理',duplicates:'music/未整理/已存在',junk:'music/未整理/冗余数据',library:'music/已整理',track_prefix:false,track_sep:'. ',follow_sidecars:true,unknown_artist:'未知歌手',unknown_album:'未知专辑',name_template:'',dir_template:'{artist}/{album}',classify_rules:'',wash_mode:'coexist',wash_max_mb:0,host_root:'/vol1/1000/1'};
+const ORG_CLASSIFY_SAMPLE='# 二级分类：按流派 / 年代分层；从上往下匹配，命中即用\n- name: 爵士\n  match:\n    genre: [jazz, 爵士]\n  path: "爵士/{artist}/{album}"\n- name: 华语\n  match:\n    genre: [mandopop, c-pop, 华语]\n  path: "华语/{artist}/{album}"\n- name: 九十年代\n  match:\n    year_min: 1990\n    year_max: 1999\n  path: "{decade}/{artist}/{album}"\n';
+const ORG_CLASSIFY_DECADE='# 二级分类：按年代分层（每个年代一个文件夹）\n- name: 2020s\n  match:\n    year_min: 2020\n  path: "{decade}/{artist}/{album}"\n- name: 2010s\n  match:\n    year_min: 2010\n    year_max: 2019\n  path: "{decade}/{artist}/{album}"\n- name: 2000s\n  match:\n    year_min: 2000\n    year_max: 2009\n  path: "{decade}/{artist}/{album}"\n- name: 九十年代\n  match:\n    year_min: 1990\n    year_max: 1999\n  path: "{decade}/{artist}/{album}"\n- name: 八十年代\n  match:\n    year_max: 1989\n  path: "{decade}/{artist}/{album}"\n';
+const ORG_CLASSIFY_LETTER='# 二级分类：按歌手首字母 / 首字分层（A–Z、其它）\n- name: 字母 A-F\n  match:\n    artist_initial: [a, b, c, d, e, f]\n  path: "{artist_initial}/{artist}/{album}"\n- name: 字母 G-M\n  match:\n    artist_initial: [g, h, i, j, k, l, m]\n  path: "{artist_initial}/{artist}/{album}"\n- name: 字母 N-Z\n  match:\n    artist_initial: [n, o, p, q, r, s, t, u, v, w, x, y, z]\n  path: "{artist_initial}/{artist}/{album}"\n- name: 其它\n  match: {}\n  path: "其它/{artist}/{album}"\n';
+const org={settings:null,paths:null,plan:null,view:'',offset:0,limit:200,total:0,timer:null,jobId:null,kind:'',writable:true,filled:false,mediaRoot:'',hostRoot:''};
+function orgBytes(n){n=Number(n)||0;return n>=1073741824?(n/1073741824).toFixed(2)+' GB':n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(0)+' KB':n+' B'}
+function orgPlanPill(status){let cls=status==='done'?'green':(status==='cancelled'||status==='failed')?'red':status==='ready'?'purple':'amber';return '<span class="pill '+cls+'">'+(ORG_PLAN_STATUS[status]||esc(status||''))+'</span>'}
+function orgOpenSettings(){if(typeof showView==='function')showView('settings');if(typeof showSettingsTab==='function')showSettingsTab('organize');orgLoad(true)}
+async function openOrganize(){await orgLoad();await orgLoadPlans()}
+function orgSubTab(name){
+  document.querySelectorAll('.org-subtab').forEach(b=>b.classList.toggle('active',b.dataset.sub===name));
+  ['basic','naming','classify','wash','help'].forEach(key=>{let el=$('org-sub-'+key);if(el)el.classList.toggle('hidden',key!==name)});
+}
+function orgTrackShortcut(){
+  let on=$('org-in-track')&&$('org-in-track').checked;
+  let sep=($('org-in-sep')||{}).value||'. ';
+  let el=$('org-in-name-template');
+  if(el)el.value=on?('<{track:02d}'+sep+'>{title}'):'{title}';   // 可选块：没音轨号时不留下孤立分隔符
+}
+function orgFillTemplate(text){let el=$('org-in-name-template');if(el)el.value=text;orgPreviewTemplate()}
+function orgFillClassify(){let el=$('org-in-classify');if(el)el.value=ORG_CLASSIFY_SAMPLE;orgPreviewTemplate()}
+function orgFillClassifyLetter(){let el=$('org-in-classify');if(el)el.value=ORG_CLASSIFY_LETTER;orgPreviewTemplate()}
+function orgFillClassifyDecade(){let el=$('org-in-classify');if(el)el.value=ORG_CLASSIFY_DECADE;orgPreviewTemplate()}
+function orgClearClassify(){let el=$('org-in-classify');if(el)el.value='';orgPreviewTemplate()}
+async function orgPreviewTemplate(){
+  let val=id=>{let el=$(id);return el?String(el.value||''):''};
+  let body={name_template:val('org-in-name-template'),dir_template:val('org-in-dir-template')||ORG_DEFAULTS.dir_template,
+    classify_rules:val('org-in-classify'),track_prefix:!!($('org-in-track')&&$('org-in-track').checked),
+    track_sep:val('org-in-sep')||'. ',unknown_artist:val('org-in-unknown-artist'),unknown_album:val('org-in-unknown-album')};
+  try{
+    let d=await api('/api/organize/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    let html;
+    if(!d.ok){html='<div class="pill red">'+esc(d.error)+'</div>'}
+    else{html=d.paths.map(row=>'<div class="org-preview-row"><span>'+esc(row.sample)+'</span><code>'+esc(row.path)+'</code>'+(row.rule?'<span class="pill purple">规则：'+esc(row.rule)+'</span>':(d.rules?'<span class="pill gray">未命中规则</span>':''))+'</div>').join('')+(d.rules?'<div class="small-label">共 '+d.rules+' 条二级分类规则</div>':'')}
+    ['org-preview','org-classify-preview'].forEach(id=>{let el=$(id);if(el&&(id==='org-preview'||!$('org-preview')))el.innerHTML=html});
+  }catch(e){
+    ['org-preview','org-classify-preview'].forEach(id=>{let el=$(id);if(el)el.innerHTML='<div class="detail-empty">'+esc(e.message)+'</div>'});
+  }
+}
+function orgSyncPaths(){
+  let root=(($('org-in-host-root')||{}).value||'').trim().replace(/\/+$/,'');
+  org.hostRoot=root;
+  ['source','duplicates','junk','library'].forEach(key=>{
+    let input=$('org-in-'+key),line=$('org-abs-'+key);
+    if(!line)return;
+    let rel=input&&input.dataset?String(input.dataset.rel||''):'';
+    line.textContent=root?('服务器实际路径：'+root+(rel?('/'+rel):'')):('服务器实际路径：未设置映射（容器内 '+(input?input.value:'')+'）');
+  });
+}
+function orgRel(id){
+  let el=$(id);if(!el)return '';
+  if(el.dataset&&typeof el.dataset.rel==='string')return el.dataset.rel;   // 加载/选择时记下的相对路径
+  return (el.value||'').trim().replace(/^\/+/, '');
+}
+async function orgLoad(fillForm){
+  try{
+    let d=await api('/api/organize/status');
+    let cfg=d.settings||{},paths=d.paths||{};
+    org.settings=cfg;org.paths=paths;org.writable=!!d.media_writable;
+    org.mediaRoot=d.media_root||'';org.hostRoot=cfg.host_root||'';
+    for(let key of ['source','duplicates','junk','library']){
+      let row=paths[key]||{};
+      let stat=$('org-stat-'+key);if(stat)stat.textContent=row.files==null?'—':row.files;
+      let size=$('org-stat-'+key+'-size');if(size)size.textContent=row.files?orgBytes(row.bytes):'';
+      let rule=$('org-rule-'+key);          // 整理页摘要：上面=容器内路径，下面小字=NAS 真实路径
+      if(rule)rule.innerHTML=esc(row.abs||cfg[key]||'—')+(row.host?('<i>NAS：'+esc(row.host)+'</i>'):'');
+      let state=$('org-state-'+key);
+      if(state){state.textContent=row.exists?'已存在':'将自动创建';state.className='org-path-state '+(row.exists?'ok':'missing')}
+      let input=$('org-in-'+key);           // 设置页的框：只读，值是容器内路径
+      if(input){input.value=row.abs||'';input.dataset.rel=row.rel||''}
+    }
+    let lib=paths.library||{},libSize=$('org-stat-library-size');
+    if(libSize)libSize.textContent=(lib.files?orgBytes(lib.bytes):'')+(d.library_index&&d.library_index.files?' · 索引 '+d.library_index.files+' 首':'');
+    let tpl=$('org-rule-template');if(tpl)tpl.textContent=(d.effective_name_template||'{title}')+' · '+(cfg.dir_template||'{artist}/{album}');
+    let side=$('org-rule-sidecars');if(side)side.textContent=cfg.follow_sidecars===false?'不跟随（进冗余数据）':'跟随歌曲并同步改名';
+    let unk=$('org-rule-unknown');if(unk)unk.textContent=(cfg.unknown_artist||'未知歌手')+' / '+(cfg.unknown_album||'未知专辑');
+    let cls=$('org-rule-classify');if(cls)cls.textContent=(cfg.classify_rules||'').trim()?'已启用（YAML 规则）':'未启用（用目录模板）';
+    let wash=$('org-rule-wash');
+    if(wash)wash.textContent=(ORG_WASH_LABEL[cfg.wash_mode]||cfg.wash_mode||'并存（默认）')+((cfg.wash_mode&&cfg.wash_mode!=='coexist'&&Number(cfg.wash_max_mb)>0)?('（上限 '+cfg.wash_max_mb+' MB）'):'');
+    let text=org.writable?'音乐库可写 · 可以执行整理':'音乐库只读 · 容器的音乐库挂载需要改为可写';
+    let w=$('org-writable');if(w){w.textContent=text;w.className='small-label '+(org.writable?'proxy-result green':'proxy-result red')}
+    let sw=$('org-set-state');if(sw){sw.textContent=text;sw.className='small-label '+(org.writable?'proxy-result green':'proxy-result red')}
+    let problems=(d.problems||[]).filter(x=>x&&x.reason);
+    if(problems.length)toast('整理配置有问题：'+problems[0].reason,true);
+    if(fillForm||!org.filled){
+      org.filled=true;
+      let set=(id,value)=>{let el=$(id);if(el&&document.activeElement!==el)el.value=value==null?'':value};
+      set('org-in-host-root',cfg.host_root==null?ORG_DEFAULTS.host_root:cfg.host_root);
+      set('org-in-sep',cfg.track_sep||ORG_DEFAULTS.track_sep);
+      set('org-in-unknown-artist',cfg.unknown_artist||ORG_DEFAULTS.unknown_artist);
+      set('org-in-unknown-album',cfg.unknown_album||ORG_DEFAULTS.unknown_album);
+      set('org-in-name-template',(cfg.name_template||'').trim()||'{title}');          // 默认值直接显示出来，可改
+      set('org-in-dir-template',(cfg.dir_template||'').trim()||ORG_DEFAULTS.dir_template);
+      set('org-in-classify',cfg.classify_rules||'');
+      set('org-in-wash-mode',cfg.wash_mode||ORG_DEFAULTS.wash_mode);
+      set('org-in-wash-max',String(cfg.wash_max_mb==null?0:cfg.wash_max_mb));
+      let sc=$('org-in-sidecars');if(sc)sc.checked=cfg.follow_sidecars!==false;
+      let tp=$('org-in-track');if(tp)tp.checked=!!cfg.track_prefix;
+      if(!(cfg.name_template||'').trim()&&$('org-in-name-template'))$('org-in-name-template').value=d.effective_name_template||'{title}';
+      orgSyncPaths();
+    }
+  }catch(e){toast('读取整理配置失败：'+e.message,true)}
+}
+async function orgSaveSettings(){
+  let val=id=>{let el=$(id);return el?String(el.value||'').trim():''};
+  let raw=id=>{let el=$(id);return el?String(el.value||''):''};
+  let num=id=>{let v=val(id);return v===''?null:Number(v)};
+  let body={source:orgRel('org-in-source'),duplicates:orgRel('org-in-duplicates'),junk:orgRel('org-in-junk'),library:orgRel('org-in-library'),
+    host_root:val('org-in-host-root'),
+    track_sep:val('org-in-sep')||ORG_DEFAULTS.track_sep,track_prefix:!!($('org-in-track')&&$('org-in-track').checked),
+    follow_sidecars:!!($('org-in-sidecars')&&$('org-in-sidecars').checked),
+    unknown_artist:val('org-in-unknown-artist'),unknown_album:val('org-in-unknown-album'),
+    name_template:val('org-in-name-template'),dir_template:val('org-in-dir-template')||ORG_DEFAULTS.dir_template,
+    classify_rules:raw('org-in-classify'),wash_mode:val('org-in-wash-mode')||ORG_DEFAULTS.wash_mode,
+    wash_max_mb:num('org-in-wash-max')};
+  if(body.wash_max_mb==null)delete body.wash_max_mb;
+  try{
+    let d=await api('/api/organize/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast((d.created&&d.created.length)?'配置已保存；已创建目录：'+d.created.join('、'):'整理配置已保存');
+    await orgLoad(true);await orgLoadPlans();
+  }catch(e){toast('保存失败：'+e.message,true)}
+}
+function orgResetSettings(){
+  openConfirm('恢复默认整理配置？','会把四个目录、命名模板、二级分类与洗版策略都改回默认值；只影响之后的扫描与执行，不会移动任何文件。',
+    '<div>结构：'+esc(ORG_DEFAULTS.source)+' / '+esc(ORG_DEFAULTS.duplicates)+' / '+esc(ORG_DEFAULTS.junk)+' / '+esc(ORG_DEFAULTS.library)+'</div><div>服务器实际路径映射：'+esc(ORG_DEFAULTS.host_root)+'</div><div>命名：{title} · '+esc(ORG_DEFAULTS.dir_template)+' · 不带音轨号</div><div>二级分类：关闭 · 洗版：并存（不比较音质）</div>',
+    async()=>{try{await api('/api/organize/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ORG_DEFAULTS)});toast('已恢复默认整理配置');await orgLoad(true)}catch(e){toast('恢复失败：'+e.message,true)}},
+    '恢复默认');
+}
+const orgPickState={key:'',path:'',abs:''};
+async function orgPick(key){
+  orgPickState.key=key;
+  $('org-pick-title').textContent='选择「'+ORG_PICK_LABEL[key]+'」';
+  $('org-pick-desc').textContent='只会列出音乐库内的目录，不会移动任何文件；找不到合适的话可以在下面新建。';
+  $('org-picker').classList.add('open');
+  let cur=(($('org-in-'+key)||{}).value||'').trim();
+  await orgBrowse(cur,true);
+}
+async function orgBrowse(path,fallback){
+  try{
+    let d=await api('/api/organize/browse?path='+encodeURIComponent(path||''));
+    orgPickState.path=d.path||'';orgPickState.abs=d.abs||'';
+    let crumbs=[{label:'音乐库',path:''}],acc='';
+    for(let part of (d.path?d.path.split('/'):[])){acc=acc?acc+'/'+part:part;crumbs.push({label:part,path:acc})}
+    $('org-pick-crumbs').innerHTML=crumbs.map(c=>'<button class="org-crumb" data-path="'+esc(c.path)+'">'+esc(c.label)+'</button>').join('<span class="org-crumb-sep">/</span>');
+    $('org-pick-crumbs').querySelectorAll('[data-path]').forEach(b=>b.onclick=()=>orgBrowse(b.dataset.path));
+    let rows='';
+    if(d.parent!==null&&d.parent!==undefined)rows+='<button class="org-pick-row up" data-path="'+esc(d.parent)+'">⬆ 上一级</button>';
+    rows+=(d.dirs||[]).map(name=>{let rel=d.path?d.path+'/'+name:name;return '<button class="org-pick-row" data-path="'+esc(rel)+'">📁 '+esc(name)+'</button>'}).join('');
+    if(!(d.dirs||[]).length)rows+='<div class="detail-empty">这个目录下还没有子文件夹，可以在下面新建。</div>';
+    $('org-pick-list').innerHTML=rows;
+    $('org-pick-list').querySelectorAll('[data-path]').forEach(b=>b.onclick=()=>orgBrowse(b.dataset.path));
+    $('org-pick-current').textContent=(d.abs||d.path||'（音乐库根目录）')+(d.path?('  ·  '+d.path):'  ·  音乐库根目录');
+    let roleLabel=keys=>keys.map(k=>ORG_PICK_LABEL[k]||k).join('、');
+    let bits=['子目录 '+(d.dirs_total||0)+' · 直接文件 '+(d.files||0)];
+    if((d.roles_exact||[]).length)bits.push('当前目录已用作：'+roleLabel(d.roles_exact));
+    if((d.roles_below||[]).length)bits.push('包含：'+roleLabel(d.roles_below));
+    $('org-pick-count').textContent=bits.join(' · ');
+    let roleLine=$('org-pick-role');
+    if(roleLine){
+      let names=keys=>(keys||[]).map(k=>ORG_PICK_LABEL[k]||k).join('、');
+      roleLine.textContent=(d.roles_exact&&d.roles_exact.length)?('这一层就是：'+names(d.roles_exact)):((d.roles_below&&d.roles_below.length)?('这一层包含：'+names(d.roles_below)):'');
+    }
+  }catch(e){
+    if(fallback&&path){return orgBrowse('')}
+    $('org-pick-list').innerHTML='<div class="detail-empty">'+esc(e.message)+'</div>';
+  }
+}
+async function orgCreateFolder(){
+  let name=($('org-pick-new-name').value||'').trim();
+  if(!name)return toast('先填写文件夹名',true);
+  try{
+    let d=await api('/api/organize/mkdir',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path:orgPickState.path,name})});
+    toast(d.created?'已创建：'+d.path:'目录已存在：'+d.path);
+    $('org-pick-new-name').value='';
+    await orgBrowse(d.path);
+  }catch(e){toast('创建失败：'+e.message,true)}
+}
+function orgPickUse(){
+  let key=orgPickState.key,rel=orgPickState.path;
+  let el=$('org-in-'+key);
+  if(el){el.value=orgPickState.abs||'';el.dataset.rel=rel}          // 只读框里存容器内路径，实际保存用相对路径
+  orgSyncPaths();
+  $('org-picker').classList.remove('open');
+  toast((ORG_PICK_LABEL[key]||'目录')+'：'+(orgPickState.abs||rel||'（音乐库根目录）')+'；别忘了点「保存配置」');
+}
+function orgPickUseRoot(){orgPickState.path='';orgPickState.abs=org.mediaRoot||'';orgPickUse()}
+async function orgScan(){
+  if(org.timer)return toast('整理任务正在进行，请先等待或点「安全停止」',true);
+  try{
+    let created=await api('/api/organize/scan',{method:'POST'});
+    toast('已创建整理扫描任务；只读，不会移动文件');
+    org.kind='organize_scan';org.view='';
+    await orgOpenPlan(created.plan_id);
+    orgStartWatch(created.job_id,created.plan_id);
+  }catch(e){toast('无法开始扫描：'+e.message,true)}
+}
+function orgStartWatch(jobId,planId){
+  if(org.timer)clearInterval(org.timer);
+  org.jobId=jobId;
+  org.timer=setInterval(()=>orgTick(planId),1000);
+  orgTick(planId);
+}
+async function orgTick(planId){
+  try{
+    let job=await api('/api/tasks/'+org.jobId);
+    let d=await api('/api/organize/plan/'+planId);
+    org.plan=Object.assign({},d,{plan_id:planId});
+    if(d.status==='scanning')orgRenderProgress(org.plan);else orgRenderPlan();
+    if(TERMINAL.has(job.status)){
+      clearInterval(org.timer);org.timer=null;
+      let c=org.plan.counts||{};
+      if(org.kind==='organize_apply'){
+        let a=org.plan.applied||{};
+        toast(job.status==='completed'?'整理完成：移动 '+(a.move||0)+' · 洗版 '+(a.wash||0)+' · 重复 '+(a.duplicate||0)+' · 冗余 '+(a.junk||0)+'，失败 '+(a.failed||0):'整理任务'+(STATUS[job.status]||job.status)+'，请查看计划明细',job.status!=='completed');
+      }else{
+        toast(job.status==='completed'?'扫描完成：待移动 '+(c.move||0)+' · 洗版 '+(c.wash||0)+' · 重复 '+(c.duplicate||0)+' · 冗余/失败 '+((c.junk||0)+(c.error||0)):'扫描任务'+(STATUS[job.status]||job.status)+'，文件未发生变化',job.status!=='completed');
+      }
+      await orgLoad();await orgLoadPlans();await orgOpenPlan(planId);
+    }
+  }catch(e){}
+}
+async function orgLoadPlans(){
+  try{
+    let d=await api('/api/organize/plans');
+    let rows=d.plans||[];
+    $('org-plan-summary').textContent=rows.length?'最近 '+rows.length+' 个计划':'暂无计划';
+    if(!rows.length){$('org-plans').innerHTML='<div class="detail-empty">还没有整理计划：点右上角「扫描待整理」生成预览。</div>';return}
+    $('org-plans').innerHTML='<div class="table-wrap"><table class="data-table"><thead><tr><th>计划</th><th>创建时间 · JST</th><th>状态</th><th>内容 / 已执行</th><th>操作</th></tr></thead><tbody>'+rows.map(r=>{let c=r.counts||{},a=r.applied||{};return '<tr><td><b>'+esc(r.plan_id)+'</b><div class="small-label">源：'+esc(r.source||'—')+'</div></td><td>'+stamp(r.created)+'</td><td>'+orgPlanPill(r.status)+'</td><td class="small-label">待移动 '+(c.move||0)+' · 洗版 '+(c.wash||0)+' · 重复 '+(c.duplicate||0)+' · 冗余/失败 '+((c.junk||0)+(c.error||0))+'<br>已执行 '+(a.move||0)+' / '+(a.wash||0)+' / '+(a.duplicate||0)+' / '+(a.junk||0)+'</td><td><button class="btn outline" data-open="'+esc(r.plan_id)+'">查看</button></td></tr>'}).join('')+'</tbody></table></div>';
+    $('org-plans').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>orgOpenPlan(b.dataset.open));
+  }catch(e){$('org-plans').innerHTML='<div class="detail-empty">读取失败：'+esc(e.message)+'</div>'}
+}
+async function orgOpenPlan(planId){
+  try{
+    let d=await api('/api/organize/plan/'+planId);
+    org.plan=Object.assign({},d,{plan_id:planId});
+    if(!org.view){
+      let c=d.counts||{};
+      org.view=(c.move?'move':c.wash?'wash':c.duplicate?'duplicate':(c.junk||c.error)?'junk':c.sidecar?'sidecar':'move');
+    }
+    org.offset=0;
+    if(d.status==='scanning'){orgRenderProgress(org.plan);if(d.scan_job&&!org.timer)orgStartWatch(d.scan_job,planId);return}
+    orgRenderPlan();
+    await orgLoadItems(false);
+  }catch(e){toast('读取计划失败：'+e.message,true)}
+}
+function orgRenderProgress(d){
+  $('org-plan-card').classList.remove('hidden');
+  $('org-plan-id').textContent=d.plan_id||'—';
+  $('org-plan-title').textContent='正在扫描「'+((d.cfg&&d.cfg.source)||'')+'」…';
+  $('org-plan-pills').innerHTML='<span class="pill amber">扫描中</span>';
+  $('org-plan-progress').classList.remove('hidden');
+  let scanned=d.scanned||0,total=(d.counts&&d.counts.total)||0;
+  let pct=total?Math.round(scanned/total*100):Math.min(92,6+scanned);
+  $('org-plan-bar').style.width=Math.max(4,Math.min(96,pct))+'%';
+  $('org-plan-progress-label').textContent='已扫描 '+scanned+' 个文件'+(total?'（共 '+total+' 个）':'')+' · 只读操作';
+  $('org-plan-actions').innerHTML='<button class="btn outline" id="org-stop-btn">安全停止</button>';
+  let stop=$('org-stop-btn');if(stop)stop.onclick=orgStopNow;
+  $('org-plan-note').textContent='扫描只读取文件名与标签，不会移动任何文件；完成后才生成可执行的清单。';
+  $('org-tabs').innerHTML='';$('org-items').innerHTML='<div class="detail-empty">扫描完成后在这里列出每个文件的去向。</div>';
+}
+async function orgStopNow(){
+  if(!org.jobId)return toast('当前没有进行中的整理任务');
+  try{await api('/api/tasks/'+org.jobId+'/cancel',{method:'POST'});toast('已请求安全停止；文件不会发生变化')}catch(e){toast(e.message,true)}
+}
+function orgRenderPlan(){
+  let d=org.plan;if(!d)return;
+  $('org-plan-card').classList.remove('hidden');
+  $('org-plan-progress').classList.add('hidden');
+  $('org-plan-id').textContent=d.plan_id||'—';
+  $('org-plan-title').textContent='源目录：'+((d.cfg&&d.cfg.source)||'—');
+  let c=d.counts||{},a=d.applied||{};
+  let countsBy={move:c.move||0,wash:c.wash||0,duplicate:c.duplicate||0,junk:(c.junk||0)+(c.error||0),sidecar:c.sidecar||0};
+  $('org-plan-pills').innerHTML=orgPlanPill(d.status)+
+    '<span class="pill purple">待移动 '+countsBy.move+'</span>'+
+    (countsBy.wash?'<span class="pill red">洗版替换 '+countsBy.wash+'</span>':'')+
+    '<span class="pill amber">重复 '+countsBy.duplicate+'</span>'+
+    '<span class="pill gray">冗余/失败 '+countsBy.junk+'</span>'+
+    '<span class="pill green">附属文件 '+countsBy.sidecar+'</span>'+
+    ((a.move||a.wash||a.duplicate||a.junk||a.failed)?'<span class="pill">已执行：移动 '+(a.move||0)+' · 洗版 '+(a.wash||0)+' · 重复 '+(a.duplicate||0)+' · 冗余 '+(a.junk||0)+(a.failed?' · 失败 '+a.failed:'')+'</span>':'');
+  let pending=countsBy.move+countsBy.wash+countsBy.duplicate+countsBy.junk;
+  let actions='';
+  if(d.status==='scanning')actions+='<button class="btn outline" id="org-stop-btn">安全停止</button>';
+  else if(pending>0)actions+='<button class="btn primary" id="org-apply-btn">执行整理（'+pending+' 项）</button><button class="btn outline" id="org-rescan-btn">重新扫描</button><button class="btn outline" id="org-discard-btn">丢弃计划</button>';
+  else actions+='<button class="btn outline" id="org-rescan-btn">重新扫描</button>'+(Object.keys(a).length?'<button class="btn outline" id="org-discard-btn">丢弃计划</button>':'');
+  $('org-plan-actions').innerHTML=actions;
+  let stop=$('org-stop-btn');if(stop)stop.onclick=orgStopNow;
+  let apply=$('org-apply-btn');if(apply)apply.onclick=orgApply;
+  let rescan=$('org-rescan-btn');if(rescan)rescan.onclick=orgScan;
+  let discard=$('org-discard-btn');if(discard)discard.onclick=orgDiscard;
+  $('org-plan-note').textContent=d.status==='done'?'本计划已执行完成；上面是每一项的实际去向。重新扫描可以继续整理新放入的歌曲。':d.status==='cancelled'?('扫描未完成：'+(d.note||'文件没有发生任何变化')+'，重新扫描即可。'):d.status==='failed'?'扫描失败：请查看实时日志后重试。':'核对清单后再执行；执行前会逐个复核文件是否变化，失败项会留在原位并标注原因。';
+  $('org-tabs').innerHTML=ORG_TABS.map(([k,label])=>'<button class="org-tab'+(org.view===k?' active':'')+'" data-kind="'+k+'">'+label+'<span class="n">'+countsBy[k]+'</span></button>').join('');
+  $('org-tabs').querySelectorAll('.org-tab').forEach(b=>b.onclick=()=>{org.view=b.dataset.kind;org.offset=0;orgRenderPlan();orgLoadItems(false)});
+}
+function orgItemRow(row){
+  let kind=row.kind||'';
+  let statusLabel={pending:'待执行',done:'已完成',failed:'失败',skipped:'已跳过',attached:'随歌曲移动'}[row.status]||esc(row.status||'');
+  let pill=row.status==='failed'?'red':row.status==='done'?'green':row.status==='pending'?'':'';
+  let dest=(kind==='move'||kind==='wash'||kind==='duplicate'||kind==='junk')?'<div class="org-dest">→ '+esc(row.actual||row.target||'—')+'</div>':'';
+  let side=(row.sidecars&&row.sidecars.length)?'<div class="org-reason">附属：'+esc(row.sidecars.map(s=>s.name+(s.error?'（'+s.error+'）':'')).join('、'))+'</div>':'';
+  return '<div class="queue-item" style="margin:9px 0;padding:12px"><div class="queue-item-top"><span class="org-name">'+esc(row.name||'')+'</span><span class="pill '+(ORG_KIND_PILL[kind]||'gray')+'">'+(ORG_KIND_LABEL[kind]||esc(kind))+'</span><span class="pill '+pill+'">'+statusLabel+'</span></div><div class="org-src">'+esc(row.src||'')+'</div>'+dest+'<div class="org-reason">'+esc(row.reason||'')+(row.error?' · '+esc(row.error):'')+'</div>'+side+'</div>';
+}
+async function orgLoadItems(append){
+  let d=org.plan;if(!d)return;
+  let kinds=org.view==='junk'?'junk,error':org.view;
+  try{
+    let data=await api('/api/organize/plan/'+d.plan_id+'?view=full&kind='+encodeURIComponent(kinds)+'&offset='+(append?org.offset:0)+'&limit='+org.limit);
+    org.total=data.total||0;
+    org.offset=(append?org.offset:0)+((data.items||[]).length);
+    let box=$('org-items');
+    let html=(data.items||[]).map(orgItemRow).join('');
+    if(!append&&!html)html='<div class="detail-empty">这一分类暂无项目。</div>';
+    if(append){let more=box.querySelector('.org-more');if(more)more.remove();box.insertAdjacentHTML('beforeend',html)}
+    else box.innerHTML=html;
+    if(org.offset<org.total){
+      box.insertAdjacentHTML('beforeend','<div class="org-more" style="padding:10px 0"><button class="btn outline" id="org-more-btn">加载更多（'+org.offset+' / '+org.total+'）</button></div>');
+      let more=$('org-more-btn');if(more)more.onclick=()=>orgLoadItems(true);
+    }
+  }catch(e){if(!append)$('org-items').innerHTML='<div class="detail-empty">读取失败：'+esc(e.message)+'</div>'}
+}
+async function orgApply(){
+  let d=org.plan;if(!d)return;
+  if(org.timer)return toast('整理任务正在进行',true);
+  let c=d.counts||{};
+  let pending=(c.move||0)+(c.wash||0)+(c.duplicate||0)+(c.junk||0)+(c.error||0);
+  let lib=(d.cfg&&d.cfg.library)||'已整理',dup=(d.cfg&&d.cfg.duplicates)||'未整理/已存在',junk=(d.cfg&&d.cfg.junk)||'未整理/冗余数据';
+  let html=(pending>500?'<div><b>本次条目较多（'+pending+' 项）</b>：建议先整理一部分，确认结果无误后再继续。</div>':'')+'<div><b>待移动 '+(c.move||0)+'</b> 首 → '+esc(lib)+'/歌手/专辑/歌名</div>'+((c.wash||0)?('<div><b>洗版替换 '+(c.wash||0)+'</b> 首：库内旧版本先进「已存在」，新文件再归档；不会删除任何文件</div>'):'')+'<div><b>重复 '+(c.duplicate||0)+'</b> 首 → '+esc(dup)+'</div><div><b>冗余/失败 '+((c.junk||0)+(c.error||0))+'</b> 个 → '+esc(junk)+'</div><div>同名 .lrc 与图片会跟随歌曲移动并改名；不删除、不覆盖任何文件。</div>';
+  openConfirm('确认执行整理（'+pending+' 项）？','执行前会逐个复核文件是否变化；失败的项留在原位并标注原因，可以重新扫描后再试。',html,async()=>{
+    try{
+      let created=await api('/api/organize/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan_id:d.plan_id,confirmed:true})});
+      toast('已创建整理执行任务'+(created.remaining?('（本次 '+created.total+' 项，剩余 '+created.remaining+' 项可再次执行）'):''));
+      org.kind='organize_apply';
+      orgStartWatch(created.job_id,d.plan_id);
+    }catch(e){toast('无法开始整理：'+e.message,true)}
+  },'确认执行整理');
+}
+function orgDiscard(){
+  let d=org.plan;if(!d)return;
+  openConfirm('丢弃这个整理计划？','只会删除计划本身，不会移动或删除任何音乐文件。', '<div>计划 '+esc(d.plan_id)+' 将从「整理计划」列表移除；如需再次整理请重新扫描。</div>', async()=>{
+    try{await api('/api/organize/plan/'+d.plan_id+'/discard',{method:'POST'});toast('计划已丢弃，文件未变动');org.plan=null;$('org-plan-card').classList.add('hidden');await orgLoadPlans()}catch(e){toast(e.message,true)}
+  },'丢弃计划');
+}
 </script></body></html>
