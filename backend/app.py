@@ -365,11 +365,96 @@ def _mb_fetch(query: str, limit: int):
     r = requests.get(
         "https://musicbrainz.org/ws/2/recording/",
         params={"query": query, "fmt": "json", "limit": limit},
-        headers={"User-Agent": "MusicTagLite/1.0 (selfhosted)"},
+        headers={"User-Agent": MB_UA},
         timeout=20,
     )
     r.raise_for_status()
     return r.json().get("recordings", [])
+
+
+# ----- release 曲目表：补音轨号/总数/光盘号/专辑类型（MusicBrainz 独有） -----
+MB_UA = "MusicInfo/1.0 (selfhosted)"
+_MB_RELEASE_CACHE = {}
+
+
+def _mb_release(release_id: str):
+    """抓取单个 release 的曲目表（含 media / recordings），进程内缓存。"""
+    if not release_id:
+        return {}
+    if release_id in _MB_RELEASE_CACHE:
+        return _MB_RELEASE_CACHE[release_id]
+    data = {}
+    try:
+        r = requests.get(
+            f"https://musicbrainz.org/ws/2/release/{release_id}",
+            params={"inc": "recordings+media+release-groups", "fmt": "json"},
+            headers={"User-Agent": MB_UA},
+            timeout=20,
+        )
+        if r.status_code == 200:
+            data = r.json()
+    except (requests.RequestException, ValueError):
+        data = {}
+    _MB_RELEASE_CACHE[release_id] = data
+    return data
+
+
+def _mb_track_info(data, rec_id: str, title: str):
+    """在 release 曲目表里定位该 recording，返回音轨号/总数/光盘号/专辑类型。"""
+    info = {}
+    if not data:
+        return info
+    want = _normalize_text(title)
+    for medium in (data.get("media") or []):
+        if not isinstance(medium, dict):
+            continue
+        tracks = medium.get("tracks") or []
+        for t in tracks:
+            if not isinstance(t, dict):
+                continue
+            rec = t.get("recording") if isinstance(t.get("recording"), dict) else {}
+            hit = bool(rec_id) and rec.get("id") == rec_id
+            if not hit and want:
+                hit = _normalize_text(t.get("title") or rec.get("title") or "") == want
+            if not hit:
+                continue
+            pos = t.get("position") or t.get("number") or ""
+            info["track"] = str(pos)
+            info["tracktotal"] = str(len(tracks))
+            mpos = medium.get("position")
+            if mpos:
+                info["disc"] = str(mpos)
+                if len(data.get("media") or []) > 1:
+                    info["disctotal"] = str(len(data["media"]))
+            rg = data.get("release-group") if isinstance(data.get("release-group"), dict) else {}
+            types = [rg.get("primary-type") or ""] + list(rg.get("secondary-types") or [])
+            types = [x for x in types if x]
+            if types:
+                info["albumtype"] = " / ".join(types)
+            return info
+    return info
+
+
+def _mb_attach_tracklists(out, max_releases: int = 2):
+    """给 MB 搜索结果补曲目表信息；最多查询 max_releases 个专辑，间隔 1s 遵守限速。"""
+    asked, fetched = set(), 0
+    for d in out:
+        rid = d.get("mb_release") or ""
+        if not rid or d.get("track"):
+            continue
+        if rid not in asked:
+            if fetched >= max_releases:
+                continue
+            if fetched:
+                time.sleep(1.0)
+            asked.add(rid)
+            fetched += 1
+            _mb_release(rid)
+        info = _mb_track_info(_MB_RELEASE_CACHE.get(rid) or {},
+                              d.get("id") or "", d.get("title") or "")
+        for k, v in info.items():
+            if v and not d.get(k):
+                d[k] = v
 
 
 def mb_search_raw(q: str, limit: int = 8):
@@ -391,6 +476,7 @@ def mb_search_raw(q: str, limit: int = 8):
             d["mb_artist"], d["mb_release"] = _mb_cover_ids(rec)
             d["score"] = rec.get("score", 0)
             out.append(d)
+        _mb_attach_tracklists(out)
         _backfill_covers(out)
         return out
     return out
