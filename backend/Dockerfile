@@ -1,5 +1,6 @@
 FROM python:3.12-slim
 WORKDIR /app
+RUN mkdir -p /data
 COPY requirements.txt .
 ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
 RUN pip install --no-cache-dir -i ${PIP_INDEX_URL} -r requirements.txt

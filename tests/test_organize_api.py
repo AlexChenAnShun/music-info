@@ -281,12 +281,12 @@ def test_container_and_host_paths(app_env):
     """框里显示容器内路径，小字显示 NAS 真实路径（映射可自定义）。"""
     client = app_env['client']
     status = client.get('/api/organize/status').json()
-    assert status['host_root'] == '/vol1/1000/1'
+    assert status['host_root'] == '/vol1/1000/Docker/music-tag-lite'
     row = status['paths']['source']
     assert row['rel'] == 'music/未整理/待整理'
     assert row['abs'].endswith('/music/未整理/待整理')            # 容器内
-    assert row['host'] == '/vol1/1000/1/music/未整理/待整理'      # NAS 上
-    assert status['paths']['library']['host'] == '/vol1/1000/1/music/已整理'
+    assert row['host'] == '/vol1/1000/Docker/music-tag-lite/music/未整理/待整理'      # NAS 上
+    assert status['paths']['library']['host'] == '/vol1/1000/Docker/music-tag-lite/music/已整理'
 
     saved = client.post('/api/organize/settings', json={'host_root': '/mnt/user/music/'}).json()['settings']
     assert saved['host_root'] == '/mnt/user/music'                  # 去掉尾斜杠
@@ -295,9 +295,9 @@ def test_container_and_host_paths(app_env):
     off = client.post('/api/organize/settings', json={'host_root': ''}).json()['settings']
     assert off['host_root'] == '' and client.get('/api/organize/status').json()['paths']['source']['host'] == ''
 
-    preview = client.post('/api/organize/preview', json={'host_root': '/vol1/1000/1'}).json()
+    preview = client.post('/api/organize/preview', json={'host_root': '/vol1/1000/Docker/music-tag-lite'}).json()
     assert preview['paths'][0]['path'] == "music/已整理/Sting/Ten Summoner's Tales/Shape of My Heart.flac"
-    assert preview['paths'][0]['host'] == "/vol1/1000/1/music/已整理/Sting/Ten Summoner's Tales/Shape of My Heart.flac"
+    assert preview['paths'][0]['host'] == "/vol1/1000/Docker/music-tag-lite/music/已整理/Sting/Ten Summoner's Tales/Shape of My Heart.flac"
 
 
 def test_preview_endpoint_renders_templates(app_env):

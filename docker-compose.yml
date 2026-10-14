@@ -6,16 +6,17 @@ services:
     ports:
       - "8003:8003"
     environment:
-      MEDIA_DIR: /app/media
-      DATA_DIR: /app/data
+      MEDIA_DIR: /media
+      DATA_DIR: /data
       JOB_WORKERS: "2"
       FANART_API_KEY: "${FANART_API_KEY:-}"
       ACOUSTID_CLIENT_KEY: "${ACOUSTID_CLIENT_KEY:-}"
     volumes:
-      # 把 /path/to/your/music 改成你自己的音乐目录
+      # ./music 就是音乐库：音乐放进 ./music/未整理/待整理，整理结果归档到 ./music/已整理
+      # 想用自己的目录，就把 ./music 换成 /path/to/your/music
       # 「本地自动整理」要移动文件，挂载需要 rw；只想改元数据可用 ro
-      - /path/to/your/music:/app/media:rw
-      - ./data:/app/data
+      - ./music:/media/music:rw
+      - ./data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8003/api/system',timeout=2).read()"]

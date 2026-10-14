@@ -44,7 +44,7 @@ from mutagen.id3 import (
     USLT,
 )
 
-MEDIA = Path(os.environ.get("MEDIA_DIR", "/app/media")).resolve()
+MEDIA = Path(os.environ.get("MEDIA_DIR", "/media")).resolve()
 EXTS = {
 ".mp3", ".flac", ".m4a", ".mp4", ".ogg", ".opus", ".wav", ".aac"}
 
@@ -1221,7 +1221,7 @@ def _must_expected(value):
     if not value or not re.fullmatch(r'[0-9a-f]{64}', value):
         raise HTTPException(400, '请刷新页面并提供当前文件版本；未经版本核验不允许写入')
 
-_APP_VERSION = '2026.10-workflow.3'
+_APP_VERSION = '2026.10-workflow.4'
 _legacy_current_tags = current_tags
 
 
@@ -1325,8 +1325,8 @@ def _write_changed_tags(path, changes, original):
     else: raise HTTPException(400,'此格式本轮仅支持读取和安全重命名')
 
 
-_STORE = _Store(os.environ.get('DATA_DIR','/app/data'))
-_PLUGINS = _PluginRegistry(os.environ.get('DATA_DIR','/app/data'))
+_STORE = _Store(os.environ.get('DATA_DIR','/data'))
+_PLUGINS = _PluginRegistry(os.environ.get('DATA_DIR','/data'))
 
 
 def _timed(pid, fn, *args, **kwargs):
@@ -1662,7 +1662,7 @@ from fastapi.responses import StreamingResponse as _StreamingResponse
 _LOG = _logging.getLogger('musicinfo')
 _LOG.setLevel(_logging.INFO)
 
-_DATA_DIR = os.environ.get('DATA_DIR', '/app/data')
+_DATA_DIR = os.environ.get('DATA_DIR', '/data')
 _SETTINGS_FILE = os.path.join(_DATA_DIR, 'settings.json')
 _SET_LOCK = _threading.Lock()
 

@@ -283,7 +283,7 @@ def register(app, store, engine, settings, persist_settings=None, log=None):
         media = organize._media_root()
         cfg = organize.validate_settings(media, current_settings(settings))
         if not os.access(str(media), os.W_OK):
-            raise HTTPException(400, '音乐目录不可写：容器里的 /app/media 需要改成可写（rw）挂载')
+            raise HTTPException(400, '音乐目录不可写：容器里的 /media 需要可写（rw）挂载（compose 里 ./music:/media/music:rw）')
         running = active_job(store)
         if running:
             raise HTTPException(409, '已有整理任务在运行（%s，%s），请先等它结束或点「安全停止」'

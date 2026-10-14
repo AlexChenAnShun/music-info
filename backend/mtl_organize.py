@@ -56,8 +56,8 @@ DEFAULT_SETTINGS = {
     'duplicates': 'music/未整理/已存在',
     'junk': 'music/未整理/冗余数据',
     'library': 'music/已整理',
-    # 容器内 /app/media 在 NAS 上的真实目录（只用于页面显示/让人照着去 NAS 里找）
-    'host_root': '/vol1/1000/1',
+    # 容器内 /media 在 NAS 上的真实目录（只用于页面显示/让人照着去 NAS 里找）
+    'host_root': '/vol1/1000/Docker/music-tag-lite',
     'track_prefix': False,
     'track_sep': '. ',
     'follow_sidecars': True,
@@ -151,7 +151,7 @@ def normalize_settings(node):
     if node.get('host_root') is not None:
         text = str(node['host_root']).strip().rstrip('/')
         if text and not text.startswith('/'):
-            raise HTTPException(400, '服务器实际路径要以 / 开头，例如 /vol1/1000/1（留空 = 只显示容器内路径）')
+            raise HTTPException(400, '服务器实际路径要以 / 开头，例如 /vol1/1000/Docker/music-tag-lite（留空 = 只显示容器内路径）')
         cfg['host_root'] = text
     if node.get('wash_max_mb') is not None:
         try:
@@ -174,11 +174,11 @@ def host_path(cfg: dict, rel: str) -> str:
 
 
 def _media_root():
-    return Path(os.environ.get('MEDIA_DIR', '/app/media')).resolve()
+    return Path(os.environ.get('MEDIA_DIR', '/media')).resolve()
 
 
 def _data_root():
-    return Path(os.environ.get('DATA_DIR', '/app/data')).resolve()
+    return Path(os.environ.get('DATA_DIR', '/data')).resolve()
 
 
 def resolve_under(media: Path, rel: str) -> Path:

@@ -39,8 +39,8 @@ docker compose up -d
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `MEDIA_DIR` | `/app/media` | 音乐库根目录（容器内路径） |
-| `DATA_DIR` | `/app/data` | 数据目录：SQLite 库 + 元数据版本快照 |
+| `MEDIA_DIR` | `/media` | 音乐库根目录（容器内路径） |
+| `DATA_DIR` | `/data` | 数据目录：SQLite 库 + 元数据版本快照 |
 | `JOB_WORKERS` | `2` | 后台任务并发数 |
 | `FANART_API_KEY` | 空 | Fanart.tv key，用于艺术家图片；留空则不启用 |
 | `ACOUSTID_CLIENT_KEY` | 空 | AcoustID 客户端 key，用于声纹识别；留空则该功能不可用 |
@@ -126,7 +126,7 @@ node tests/viewport-layout.cjs
 ```yaml
 # docker-compose.yml：自动整理要写入，挂载必须是 rw
 volumes:
-  - /path/to/your/music:/app/media:rw
+  - ./music:/media/music:rw
 ```
 
 ---
@@ -134,7 +134,7 @@ volumes:
 ## ⚠️ 安全说明
 
 - 服务**没有鉴权**，请只在本机或内网使用，不要直接暴露到公网
-- 媒体目录默认**只读挂载**（`/app/media:ro`）即可；启用「本地自动整理」时挂载需为 **rw**（`/app/media:rw`），因为它要移动文件（只移动、不删除、不覆盖，且需二次确认）
+- 媒体目录默认**只读挂载**（`/media/music:ro`）即可；启用「本地自动整理」时挂载需为 **rw**（`/media/music:rw`），因为它要移动文件（只移动、不删除、不覆盖，且需二次确认）
 - 只修改元数据、封面与歌词，不重编码音频；写入前会校验 `file_version`
 - 请勿把 `.env`、`data/` 或任何密钥提交进仓库
 

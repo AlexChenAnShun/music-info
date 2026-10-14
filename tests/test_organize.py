@@ -515,8 +515,8 @@ def test_settings_validation(tree):
         org.validate_settings(media, {'duplicates': 'music/已整理/重复'})       # 在归档目录里面 → 不允许
     assert '已整理归档目录' in str(conflict.value.detail) and '已存在目录' in str(conflict.value.detail)
     host = org.validate_settings(media, {})
-    assert host['host_root'] == '/vol1/1000/1'
-    assert org.host_path(host, host['source']) == '/vol1/1000/1/music/未整理/待整理'
+    assert host['host_root'] == '/vol1/1000/Docker/music-tag-lite'
+    assert org.host_path(host, host['source']) == '/vol1/1000/Docker/music-tag-lite/music/未整理/待整理'
     assert org.host_path(org.validate_settings(media, {'host_root': ''}), 'music/已整理') == ''
 
 
