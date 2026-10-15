@@ -1,0 +1,193 @@
+.rx-scope {
+  min-width: 0;
+}
+.rx-scope .rx-path,
+.rx-scope code,
+.rx-path {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.rx-scope .org-rule b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rx-scope .org-rule i {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--muted);
+  font-style: normal;
+  margin-top: 3px;
+}
+.rx-scope .rx-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.rx-scope .btn-row {
+  flex-wrap: wrap;
+}
+.rx-scope .org-subtabs {
+  flex-wrap: wrap;
+}
+.rx-scope .field input,
+.rx-scope .field textarea,
+.rx-scope .field select {
+  width: 100%;
+  min-width: 0;
+}
+.rx-alert {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.rx-error {
+  background: #fff2f3 !important;
+  border-color: #efd4d9 !important;
+  color: #963d4d;
+}
+.rx-dialog {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 680px;
+  width: calc(100% - 32px);
+  max-height: 85dvh;
+  overflow: auto;
+  color: var(--ink);
+  box-shadow: 0 20px 90px #18223430;
+  background: white;
+}
+.rx-dialog::backdrop {
+  background: #16213a60;
+}
+.rx-dialog h3 {
+  margin: 0 0 12px;
+}
+.rx-dialog-body {
+  min-width: 0;
+}
+.rx-dialog .org-pick-list {
+  max-height: 36dvh;
+  overflow: auto;
+}
+.rx-dialog input {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px;
+  min-width: 0;
+}
+.rx-item {
+  padding: 12px;
+  margin: 9px 0;
+}
+.rx-indeterminate {
+  height: 8px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eee8ff, #8d6deb, #eee8ff);
+  background-size: 200% 100%;
+  animation: rx-flow 1.8s linear infinite;
+}
+@keyframes rx-flow {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rx-indeterminate {
+    animation: none;
+  }
+}
+@media (max-width: 760px) {
+  .rx-scope .org-grid {
+    grid-template-columns: 1fr;
+  }
+  .rx-scope .page-heading {
+    flex-direction: column;
+  }
+  .rx-scope .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rx-scope .org-plan-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .rx-scope .org-actions {
+    flex-wrap: wrap;
+  }
+  .rx-scope .org-rule {
+    grid-template-columns: 1fr;
+  }
+  .rx-scope .field-grid {
+    grid-template-columns: 1fr;
+  }
+  .rx-scope .filename-row {
+    display: flex;
+  }
+  .rx-scope .filename-row input {
+    flex: 1;
+    min-width: 0;
+  }
+  .rx-dialog {
+    padding: 18px;
+  }
+  .rx-dialog .dialog-actions {
+    flex-wrap: wrap;
+  }
+}
+/* Keep the legacy workbench untouched; wrap its shared navigation on these two pages. */
+@media (min-width: 761px) and (max-width: 1079px) {
+  body:has(#view-organize:not(.hidden)) .appbar,
+  body:has(#view-settings:not(.hidden)) .appbar {
+    height: auto;
+    padding: 14px 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  body:has(#view-organize:not(.hidden)) .bar-nav,
+  body:has(#view-settings:not(.hidden)) .bar-nav {
+    order: 2;
+    width: 100%;
+    justify-content: space-around;
+  }
+  body:has(#view-organize:not(.hidden)) .bar-right,
+  body:has(#view-settings:not(.hidden)) .bar-right {
+    margin-left: auto;
+  }
+}
+.rx-scope .stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.rx-scope .stat-box {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .rx-scope .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rx-scope .org-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+  .rx-scope .org-rule b {
+    text-align: left;
+  }
+  .rx-scope .org-help-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body:has(#view-organize:not(.hidden)) .bar-nav,
+  body:has(#view-settings:not(.hidden)) .bar-nav {
+    max-width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  body:has(#view-organize:not(.hidden)) .bar-nav .nav-btn,
+  body:has(#view-settings:not(.hidden)) .bar-nav .nav-btn {
+    min-width: 0;
+    padding: 7px 5px;
+    font-size: 11.5px;
+  }
+}

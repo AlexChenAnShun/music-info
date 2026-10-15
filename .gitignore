@@ -45,3 +45,13 @@ Thumbs.db
 *.ape
 *.lrc
 .integrate-backup-*/
+
+# React 构建依赖与浏览器测试截图
+node_modules/
+tests/failure.png
+tests/react-settings-mobile.png
+tests/react-live-*.png
+
+# React browser regression artifacts
+tests/react-*.png
+backend/static/.vite/

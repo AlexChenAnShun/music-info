@@ -2,7 +2,7 @@
 
 自托管的本地音乐标签工作台：**多源检索元数据 → 预览差异 → 人工确认后写入**，每次写入都有历史记录，可预览、可一键回退。
 
-前端是单文件原生 HTML/CSS/JS（无构建工具、无框架），后端 FastAPI + mutagen，元数据审计存 SQLite(WAL)，Docker 一条命令部署。
+前端整站采用 **React 19 + Vite**：应用导航、标签工作台、任务中心、修改记录、实时日志、自动整理和全部设置均由 React 接管（源码 `frontend/`，本地打包，无 CDN 依赖）。后端 FastAPI + mutagen，元数据审计存 SQLite(WAL)，Docker 一条命令部署。
 
 > 只改元数据：标签、封面、歌词。**不触碰音频内容本身**。
 
@@ -17,7 +17,8 @@
 - **历史与回退**：SQLite(WAL) 记录每次写入的元数据快照，可预览差异并一键回退
 - **后台任务队列**：批量预览 / 批量写入，可取消、并发可配；未匹配（原文件尚未刮削）与真失败分开呈现
 - **封面**：候选封面可预览，确认后与标签在同一次提交写入
-- **界面**：曲库封面缩略图、匹配度徽标、进度条；响应式，宽度 2560 → 390 均可用
+- **界面**：整站 React 应用、曲库封面缩略图、匹配度徽标、进度条；响应式，桌面至 390px 手机布局
+- **前端验证**：12 项逻辑单测 + 30 项全模拟浏览器回归；真实服务只读验收脚本强制阻断非 GET/HEAD 请求
 
 ---
 
@@ -90,21 +91,24 @@ docker compose up -d
 |---|---|
 | 后端 | Python 3.12 · FastAPI · uvicorn · mutagen · requests |
 | 存储 | SQLite（WAL 模式），元数据版本快照存 `data/versions/` |
-| 前端 | 单文件 `backend/static/index.html`，原生 HTML/CSS/JS |
+| 前端 | React 19 + Vite，单根组件与模块化页面，静态资源随 Docker 分发 |
 | 容器 | `python:3.12-slim` + `libchromaprint-tools`（fpcalc） |
 
 ---
 
 ## 🧪 开发与测试
 
+完整 React 前端：`cd frontend && npm ci && npm run build && npm test`；浏览器交互回归 `npm run test:ui`（全模拟 API，不接触 NAS；Windows 可设置 `UI_BROWSER_CHANNEL=msedge`）。构建产物位于 `backend/static/assets/`，Vite 自动生成轻量 HTML 入口及资源引用。部署前须构建并保留对应哈希资源，详见 `frontend/README.md`。
+
 ```bash
 # 后端接口测试
 pip install -r backend/requirements.txt
 python -m pytest tests/test_workflow.py
 
-# 前端渲染/交互检查（需要 Node.js 与本地 Chromium）
-node tests/workflow-ui.cjs
-node tests/viewport-layout.cjs
+# React 前端单测与全模拟浏览器回归（需要 Node.js 与本地 Chromium/Edge）
+cd frontend
+npm ci && npm run build && npm test
+npm run test:ui
 ```
 
 ---
